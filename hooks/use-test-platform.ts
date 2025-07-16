@@ -510,123 +510,6 @@ export function useTestPlatform() {
     }
   }, [code, currentProblem, selectedEditorLanguage]);
 
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      updateLivePreviewAndConsole();
-    }, 500);
-    return () => clearTimeout(handler);
-  }, [
-    code,
-    currentProblem,
-    selectedEditorLanguage,
-    updateLivePreviewAndConsole,
-  ]);
-
-  const hasErrors = useCallback(() => {
-    const currentTemplate =
-      currentProblem?.solutions[selectedEditorLanguage]?.initialCodeTemplate;
-    if (!currentTemplate) return false;
-
-    if (selectedEditorLanguage === "javascript") {
-      return (
-        code.includes("// Write your solution here") ||
-        code.includes("// Add your logic here")
-      );
-    } else if (selectedEditorLanguage === "python") {
-      return code.includes("# Write your solution here");
-    }
-    return false;
-  }, [code, currentProblem, selectedEditorLanguage]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "/") {
-        e.preventDefault();
-
-        const textarea = textareaRef.current;
-        if (!textarea) return;
-
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const lines = code.split("\n");
-
-        let startLine = 0;
-        let charsCount = 0;
-        for (let i = 0; i < lines.length; i++) {
-          if (charsCount + lines[i].length + 1 > start) {
-            startLine = i;
-            break;
-          }
-          charsCount += lines[i].length + 1;
-        }
-
-        let endLine = startLine;
-        if (end > start) {
-          let currentChars = charsCount;
-          for (let i = startLine; i < lines.length; i++) {
-            if (currentChars >= end) {
-              endLine = i;
-              break;
-            }
-            currentChars += lines[i].length + 1;
-            if (i === lines.length - 1 && currentChars < end) {
-              endLine = i;
-            }
-          }
-        }
-
-        let allCommented = true;
-        const commentPrefix = selectedEditorLanguage === "python" ? "#" : "//";
-
-        for (let i = startLine; i <= endLine; i++) {
-          if (!lines[i].trim().startsWith(commentPrefix)) {
-            allCommented = false;
-            break;
-          }
-        }
-
-        const newLines = [...lines];
-        let newSelectionStart = start;
-        let newSelectionEnd = end;
-
-        for (let i = startLine; i <= endLine; i++) {
-          const line = newLines[i];
-          if (allCommented) {
-            const commentIndex = line.indexOf(commentPrefix);
-            if (commentIndex !== -1) {
-              newLines[i] =
-                line.substring(0, commentIndex) +
-                line.substring(commentIndex + commentPrefix.length);
-              if (i === startLine)
-                newSelectionStart = Math.max(0, start - commentPrefix.length);
-              if (i === endLine)
-                newSelectionEnd = Math.max(0, end - commentPrefix.length);
-            }
-          } else {
-            newLines[i] = commentPrefix + line;
-            if (i === startLine)
-              newSelectionStart = start + commentPrefix.length;
-            if (i === endLine) newSelectionEnd = end + commentPrefix.length;
-          }
-        }
-
-        const newCode = newLines.join("\n");
-        setCode(newCode);
-
-        setTimeout(() => {
-          if (textareaRef.current) {
-            textareaRef.current.selectionStart = newSelectionStart;
-            textareaRef.current.selectionEnd = newSelectionEnd;
-          }
-        }, 0);
-      } else if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-        e.preventDefault();
-        runTests();
-      }
-    },
-    [code, selectedEditorLanguage]
-  );
-
   const runTests = useCallback(async () => {
     if (!currentProblem) return;
 
@@ -910,6 +793,131 @@ export function useTestPlatform() {
     markProblemAsCompleted(currentProblem.id);
     localStorage.removeItem("inProgressTest");
   }, [code, currentProblem, selectedEditorLanguage, markProblemAsCompleted]);
+
+  // Effect to trigger live preview and run tests on code change
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      updateLivePreviewAndConsole();
+      // Only run tests if not already running to prevent overlapping executions
+      if (!isRunningTests) {
+        runTests();
+      }
+    }, 500); // Debounce for 500ms
+
+    return () => clearTimeout(handler);
+  }, [
+    code,
+    currentProblem,
+    selectedEditorLanguage,
+    updateLivePreviewAndConsole,
+    runTests,
+    isRunningTests,
+  ]);
+
+  const hasErrors = useCallback(() => {
+    const currentTemplate =
+      currentProblem?.solutions[selectedEditorLanguage]?.initialCodeTemplate;
+    if (!currentTemplate) return false;
+
+    if (selectedEditorLanguage === "javascript") {
+      return (
+        code.includes("// Write your solution here") ||
+        code.includes("// Add your logic here")
+      );
+    } else if (selectedEditorLanguage === "python") {
+      return code.includes("# Write your solution here");
+    }
+    return false;
+  }, [code, currentProblem, selectedEditorLanguage]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "/") {
+        e.preventDefault();
+
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const lines = code.split("\n");
+
+        let startLine = 0;
+        let charsCount = 0;
+        for (let i = 0; i < lines.length; i++) {
+          if (charsCount + lines[i].length + 1 > start) {
+            startLine = i;
+            break;
+          }
+          charsCount += lines[i].length + 1;
+        }
+
+        let endLine = startLine;
+        if (end > start) {
+          let currentChars = charsCount;
+          for (let i = startLine; i < lines.length; i++) {
+            if (currentChars >= end) {
+              endLine = i;
+              break;
+            }
+            currentChars += lines[i].length + 1;
+            if (i === lines.length - 1 && currentChars < end) {
+              endLine = i;
+            }
+          }
+        }
+
+        let allCommented = true;
+        const commentPrefix = selectedEditorLanguage === "python" ? "#" : "//";
+
+        for (let i = startLine; i <= endLine; i++) {
+          if (!lines[i].trim().startsWith(commentPrefix)) {
+            allCommented = false;
+            break;
+          }
+        }
+
+        const newLines = [...lines];
+        let newSelectionStart = start;
+        let newSelectionEnd = end;
+
+        for (let i = startLine; i <= endLine; i++) {
+          const line = newLines[i];
+          if (allCommented) {
+            const commentIndex = line.indexOf(commentPrefix);
+            if (commentIndex !== -1) {
+              newLines[i] =
+                line.substring(0, commentIndex) +
+                line.substring(commentIndex + commentPrefix.length);
+              if (i === startLine)
+                newSelectionStart = Math.max(0, start - commentPrefix.length);
+              if (i === endLine)
+                newSelectionEnd = Math.max(0, end - commentPrefix.length);
+            }
+          } else {
+            newLines[i] = commentPrefix + line;
+            if (i === startLine)
+              newSelectionStart = start + commentPrefix.length;
+            if (i === endLine) newSelectionEnd = end + commentPrefix.length;
+          }
+        }
+
+        const newCode = newLines.join("\n");
+        setCode(newCode);
+
+        setTimeout(() => {
+          if (textareaRef.current) {
+            textareaRef.current.selectionStart = newSelectionStart;
+            textareaRef.current.selectionEnd = newSelectionEnd;
+          }
+        }, 0);
+      } else if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        runTests();
+      }
+    },
+    [code, selectedEditorLanguage]
+  );
 
   return {
     currentScreen,
