@@ -14,6 +14,7 @@ interface Problem {
   constraints: string[];
   tags: string[];
   languages: string[];
+  reactPropName?: string; // New: Optional property for React problems to specify the main prop name
   solutions: {
     [key: string]: {
       initialCodeTemplate: string;
@@ -170,6 +171,7 @@ export const problemsData: { [key: string]: Problem } = {
     estimatedTime: "30 min",
     requiresWebcam: false,
     languages: ["javascript"],
+    reactPropName: "users", // Added for dynamic prop passing
     solutions: {
       javascript: {
         initialCodeTemplate: `function UserList({ users }) {
@@ -288,6 +290,7 @@ export const problemsData: { [key: string]: Problem } = {
     estimatedTime: "45 min",
     requiresWebcam: false,
     languages: ["javascript"],
+    reactPropName: "products", // Added for dynamic prop passing
     solutions: {
       javascript: {
         initialCodeTemplate: `function ProductGrid({ products }) {

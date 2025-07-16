@@ -458,9 +458,16 @@ export function useTestPlatform() {
           let previewOutput: string | null = null;
           if (problemSolution.testCases.length > 0) {
             try {
-              previewOutput = userFunction({
-                users: problemSolution.testCases[0].input[0],
-              });
+              const propName = currentProblem.reactPropName;
+              if (propName) {
+                const props = {
+                  [propName]: problemSolution.testCases[0].input[0],
+                };
+                previewOutput = userFunction(props);
+              } else {
+                previewOutput = `Error: 'reactPropName' is not defined for this React problem.`;
+                customConsole.error(previewOutput);
+              }
             } catch (err) {
               previewOutput = `Error in preview: ${(err as Error).message}`;
               customConsole.error(
@@ -773,9 +780,16 @@ export function useTestPlatform() {
 
           if (problemSolution.testCases.length > 0) {
             try {
-              latestHtmlOutput = userFunction({
-                users: problemSolution.testCases[0].input[0],
-              });
+              const propName = currentProblem.reactPropName;
+              if (propName) {
+                const props = {
+                  [propName]: problemSolution.testCases[0].input[0],
+                };
+                latestHtmlOutput = userFunction(props);
+              } else {
+                latestHtmlOutput = `Error: 'reactPropName' is not defined for this React problem.`;
+                customConsole.error(latestHtmlOutput);
+              }
             } catch (err) {
               latestHtmlOutput = `Error rendering preview: ${
                 (err as Error).message
@@ -784,36 +798,45 @@ export function useTestPlatform() {
                 `Error rendering preview: ${(err as Error).message}`
               );
             }
-          }
-          setUserHtmlOutput(latestHtmlOutput);
+            setUserHtmlOutput(latestHtmlOutput);
 
-          for (let i = 0; i < problemSolution.testCases.length; i++) {
-            const testCase = problemSolution.testCases[i];
-            try {
-              const result = userFunction({ users: testCase.input[0] });
-              const passed = result === testCase.expected;
+            for (let i = 0; i < problemSolution.testCases.length; i++) {
+              const testCase = problemSolution.testCases[i];
+              try {
+                let result: any;
+                const propName = currentProblem.reactPropName;
+                if (propName) {
+                  const props = { [propName]: testCase.input[0] };
+                  result = userFunction(props);
+                } else {
+                  result = `Error: 'reactPropName' is not defined for this React problem.`;
+                  customConsole.error(result);
+                }
 
-              results.push({
-                testCase: i + 1,
-                input: testCase.input,
-                expected: testCase.expected,
-                actual: result,
-                passed: passed,
-                error: null,
-              });
-            } catch (error) {
-              results.push({
-                testCase: i + 1,
-                input: testCase.input,
-                expected: testCase.expected,
-                actual: null,
-                passed: false,
-                error: (error as Error).message,
-              });
+                const passed = result === testCase.expected;
+
+                results.push({
+                  testCase: i + 1,
+                  input: testCase.input,
+                  expected: testCase.expected,
+                  actual: result,
+                  passed: passed,
+                  error: null,
+                });
+              } catch (error) {
+                results.push({
+                  testCase: i + 1,
+                  input: testCase.input,
+                  expected: testCase.expected,
+                  actual: null,
+                  passed: false,
+                  error: (error as Error).message,
+                });
+              }
             }
-          }
 
-          setTestResults(results);
+            setTestResults(results);
+          }
         } else {
           const userFunction = new Function("console", "return " + code)(
             customConsole
