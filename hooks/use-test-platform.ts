@@ -4,7 +4,11 @@
 import type React from "react";
 
 import { problemsData } from "@/lib/problems";
-import { convertTimeToSeconds, formatTime } from "@/lib/utils";
+import {
+  convertTimeToSeconds,
+  extractComponentName,
+  formatTime,
+} from "@/lib/utils";
 import * as Babel from "@babel/standalone";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -727,11 +731,27 @@ export function useTestPlatform() {
           }
 
           let userFunction: any;
+
           try {
+            const componentName = extractComponentName(code);
+            if (!componentName) {
+              setTestResults([
+                {
+                  testCase: "Error",
+                  input: null,
+                  expected: null,
+                  actual: null,
+                  passed: false,
+                  error:
+                    "Cannot detect component name. Make sure to name your function with PascalCase (e.g. UserList).",
+                },
+              ]);
+              return;
+            }
             userFunction = new Function(
               "React",
               "console",
-              transpiledCode + "; return UserList;"
+              `${transpiledCode}; return ${componentName};`
             )(React, customConsole);
           } catch (err) {
             setTestResults([
