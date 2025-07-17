@@ -2,18 +2,20 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Clock } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Camera } from "lucide-react"
+import { Camera, Clock, Moon, Sun } from "lucide-react"
 import { useState } from "react"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { useTheme } from "next-themes"
 
 interface Problem {
   id: string
   title: string
   difficulty: "Easy" | "Medium" | "Hard"
   estimatedTime: string
-  requiresWebcam: boolean // Added webcam flag
-  language: string // Added language property for filtering
+  requiresWebcam: boolean
+  language: string
 }
 
 const problems: Problem[] = [
@@ -73,14 +75,22 @@ const problems: Problem[] = [
     requiresWebcam: false,
     language: "Python",
   },
+  {
+    id: "react-laptop-list",
+    title: "Laptop List",
+    difficulty: "Easy",
+    estimatedTime: "1 min",
+    requiresWebcam: true,
+    language: "React",
+  },
 ]
 
 interface ProblemSelectionProps {
   onSelectProblem: (problemId: string) => void
-  completedProblems: string[] // New prop for completed problems
+  completedProblems?: string[]
 }
 
-export default function ProblemSelection({ onSelectProblem, completedProblems }: ProblemSelectionProps) {
+export default function ProblemSelection({ onSelectProblem, completedProblems = [] }: ProblemSelectionProps) {
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case "Easy":
@@ -95,13 +105,19 @@ export default function ProblemSelection({ onSelectProblem, completedProblems }:
   }
 
   const [selectedLanguageFilter, setSelectedLanguageFilter] = useState("All")
+  const [showCompleted, setShowCompleted] = useState(true)
+  const { setTheme, theme } = useTheme()
 
-  // Filter problems based on selected language
+  // Filter problems based on selected language and completed status
   const filteredProblems = problems.filter((problem) => {
-    if (selectedLanguageFilter === "All") {
-      return true
+    const matchesLanguage = selectedLanguageFilter === "All" || problem.language === selectedLanguageFilter
+    const isCompleted = completedProblems.includes(problem.id)
+
+    if (!showCompleted && isCompleted) {
+      return false
     }
-    return problem.language === selectedLanguageFilter
+
+    return matchesLanguage
   })
 
   return (
@@ -144,6 +160,19 @@ export default function ProblemSelection({ onSelectProblem, completedProblems }:
           </Tabs>
         </div>
 
+        {/* Show Completed Toggle */}
+        <div className="flex items-center space-x-2 mb-8 justify-end">
+          <Switch
+            id="show-completed"
+            checked={showCompleted}
+            onCheckedChange={setShowCompleted}
+            className="data-[state=checked]:bg-neobrutal-softBlue data-[state=unchecked]:bg-neobrutal-border"
+          />
+          <Label htmlFor="show-completed" className="text-neobrutal-text">
+            Show Completed Problems
+          </Label>
+        </div>
+
         <div className="grid gap-6">
           {filteredProblems.map((problem) => {
             const isCompleted = completedProblems.includes(problem.id)
@@ -164,7 +193,10 @@ export default function ProblemSelection({ onSelectProblem, completedProblems }:
                     <div className="flex items-center space-x-2">
                       <Badge className={getDifficultyColor(problem.difficulty)}>{problem.difficulty}</Badge>
                       {problem.requiresWebcam && (
-                        <Badge variant="secondary" className="flex items-center gap-1">
+                        <Badge
+                          variant="secondary"
+                          className="flex items-center gap-1 bg-neobrutal-gray text-neobrutal-text"
+                        >
                           <Camera className="w-3 h-3" /> Webcam
                         </Badge>
                       )}
@@ -188,6 +220,19 @@ export default function ProblemSelection({ onSelectProblem, completedProblems }:
             )
           })}
         </div>
+      </div>
+
+      {/* Floating Theme Toggle for Problem Selection */}
+      <div className="fixed bottom-4 right-4 z-50">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          className="shadow-[4px_4px_0px_0px_#333333] border-2 border-neobrutal-border bg-neobrutal-card text-neobrutal-text hover:bg-neobrutal-card/90"
+          aria-label="Toggle theme"
+        >
+          {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+        </Button>
       </div>
     </div>
   )

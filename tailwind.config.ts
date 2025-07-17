@@ -53,20 +53,21 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Custom soft neobrutalism palette
+        // Neo-brutalism colors
         neobrutal: {
-          bg: "#F0F0F0", // Very light grey for main background
-          card: "#FFFFFF", // White for cards/panels
-          border: "#333333", // Dark grey for borders/shadows
-          text: "#1A1A1A", // Almost black for main text
-          softGreen: "#D4EDDA", // Muted green for success
-          softGreenText: "#285A3B",
-          softYellow: "#FFF3CD", // Muted yellow for warning
-          softYellowText: "#664D03",
-          softRed: "#F8D7DA", // Muted red for destructive/error
-          softRedText: "#721C24",
-          softBlue: "#CCE5FF", // Muted blue for primary actions/info
-          softBlueText: "#004085",
+          bg: "hsl(var(--neobrutal-bg))",
+          text: "hsl(var(--neobrutal-text))",
+          border: "hsl(var(--neobrutal-border))",
+          card: "hsl(var(--neobrutal-card))",
+          softBlue: "hsl(var(--neobrutal-softBlue))",
+          softBlueText: "hsl(var(--neobrutal-softBlueText))",
+          softGreen: "hsl(var(--neobrutal-softGreen))",
+          softGreenText: "hsl(var(--neobrutal-softGreenText))",
+          softYellow: "hsl(var(--neobrutal-softYellow))",
+          softYellowText: "hsl(var(--neobrutal-softYellowText))",
+          softRed: "hsl(var(--neobrutal-softRed))",
+          softRedText: "hsl(var(--neobrutal-softRedText))",
+          gray: "hsl(var(--neobrutal-gray))",
         },
       },
       borderRadius: {
@@ -90,7 +91,7 @@ const config = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
 } satisfies Config
 
 export default config

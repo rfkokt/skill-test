@@ -1,4 +1,3 @@
-// hooks/use-test-platform.ts
 "use client";
 
 import type React from "react";
@@ -32,11 +31,14 @@ export function useTestPlatform() {
   const [showTabWarning, setShowTabWarning] = useState(false);
   const [showExitConfirmationModal, setShowExitConfirmationModal] =
     useState(false);
+  const [showTimeUpModal, setShowTimeUpModal] = useState(false);
+  const [showInactivityModal, setShowInactivityModal] = useState(false);
+  const [showFinishTestModal, setShowFinishTestModal] = useState(false);
   const [violationCount, setViolationCount] = useState(0);
   const [testResults, setTestResults] = useState<any[]>([]);
-  const [isRunningTests, setIsRunningTests] = useState(false); // Renamed to avoid conflict with isTimerRunning
+  const [isRunningTests, setIsRunningTests] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  const [userHtmlOutput, setUserHtmlOutput] = useState<string | null>(null);
+  const [userHtmlOutputs, setUserHtmlOutputs] = useState<(string | null)[]>([]); // Changed to array
   const [consoleOutput, setConsoleOutput] = useState<string[]>([]);
   const [webcamStream, setWebcamStream] = useState<MediaStream | null>(null);
   const [selectedEditorLanguage, setSelectedEditorLanguage] =
@@ -130,7 +132,10 @@ export function useTestPlatform() {
     setViolationCount(0);
     setTestResults([]);
     setConsoleOutput([]);
-    setUserHtmlOutput(null);
+    setUserHtmlOutputs([]); // Reset to empty array
+    setShowTimeUpModal(false);
+    setShowInactivityModal(false);
+    setShowFinishTestModal(false);
     if (hiddenTimerRef.current) {
       clearTimeout(hiddenTimerRef.current);
       hiddenTimerRef.current = null;
@@ -138,15 +143,53 @@ export function useTestPlatform() {
     hiddenStartTimeRef.current = null;
   }, [stopWebcam]);
 
-  // Function to fail the test due to inactivity
+  // Function to fail the test due to inactivity - now shows modal instead of alert
   const failTestDueToInactivity = useCallback(() => {
-    alert("Tes gagal! Anda tidak aktif di tab ini selama 30 detik.");
+    setShowInactivityModal(true);
+  }, []);
+
+  // Function to handle time up - now shows modal instead of alert
+  const handleTimeUp = useCallback(() => {
+    setShowTimeUpModal(true);
+  }, []);
+
+  // Function to confirm time up modal
+  const confirmTimeUp = useCallback(() => {
     if (currentProblem) {
       markProblemAsCompleted(currentProblem.id);
     }
     localStorage.removeItem("inProgressTest");
     resetTestState();
   }, [currentProblem, markProblemAsCompleted, resetTestState]);
+
+  // Function to confirm inactivity modal
+  const confirmInactivity = useCallback(() => {
+    if (currentProblem) {
+      markProblemAsCompleted(currentProblem.id);
+    }
+    localStorage.removeItem("inProgressTest");
+    resetTestState();
+  }, [currentProblem, markProblemAsCompleted, resetTestState]);
+
+  // Function to handle finish test button
+  const handleFinishTest = useCallback(() => {
+    setShowFinishTestModal(true);
+  }, []);
+
+  // Function to confirm finish test
+  const confirmFinishTest = useCallback(() => {
+    setShowFinishTestModal(false);
+    if (currentProblem) {
+      markProblemAsCompleted(currentProblem.id); // Mark problem as completed
+    }
+    localStorage.removeItem("inProgressTest"); // Clear in-progress test
+    resetTestState(); // Redirect to selection screen
+  }, [currentProblem, markProblemAsCompleted, resetTestState]);
+
+  // Function to cancel finish test
+  const cancelFinishTest = useCallback(() => {
+    setShowFinishTestModal(false);
+  }, []);
 
   // New function to handle exiting a test, including exit count logic
   const handleExitTest = useCallback(
@@ -236,7 +279,7 @@ export function useTestPlatform() {
     inProgressTest,
   ]);
 
-  // Timer logic
+  // Timer logic - updated to use modal instead of alert
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isTimerRunning && timeLeft > 0) {
@@ -244,21 +287,10 @@ export function useTestPlatform() {
         setTimeLeft((time) => time - 1);
       }, 1000);
     } else if (isTimerRunning && timeLeft === 0) {
-      alert("Waktu Anda telah habis! Tes akan dihentikan.");
-      if (currentProblem) {
-        markProblemAsCompleted(currentProblem.id);
-      }
-      localStorage.removeItem("inProgressTest");
-      resetTestState();
+      handleTimeUp();
     }
     return () => clearInterval(interval);
-  }, [
-    isTimerRunning,
-    timeLeft,
-    currentProblem,
-    markProblemAsCompleted,
-    resetTestState,
-  ]);
+  }, [isTimerRunning, timeLeft, handleTimeUp]);
 
   // Tab switching detection and refresh prevention
   const handleVisibilityChange = useCallback(() => {
@@ -315,10 +347,10 @@ export function useTestPlatform() {
     [currentScreen, stopWebcam]
   );
 
-  const isLeavingConfirmedRef = useRef(false); // Use a ref for this flag
+  const isLeavingConfirmedRef = useRef(false);
 
   const handleLeavingConfirmation = useCallback(() => {
-    isLeavingConfirmedRef.current = true; // Set ref to true
+    isLeavingConfirmedRef.current = true;
     handleExitTest(true);
     stopWebcam();
     window.location.reload();
@@ -384,7 +416,7 @@ export function useTestPlatform() {
   const updateLivePreviewAndConsole = useCallback(() => {
     setConsoleOutput([]);
     if (!currentProblem) {
-      setUserHtmlOutput(null);
+      setUserHtmlOutputs([]);
       return;
     }
 
@@ -414,7 +446,7 @@ export function useTestPlatform() {
 
     const problemSolution = currentProblem.solutions[selectedEditorLanguage];
     if (!problemSolution) {
-      setUserHtmlOutput(null);
+      setUserHtmlOutputs([]);
       setConsoleOutput(["Live execution for this language is not supported."]);
       return;
     }
@@ -455,32 +487,41 @@ export function useTestPlatform() {
             "return " + code
           )(React, customConsole);
 
-          let previewOutput: string | null = null;
+          // Generate preview outputs for all test cases
+          const previewOutputs: (string | null)[] = [];
           if (problemSolution.testCases.length > 0) {
-            try {
-              const propName = currentProblem.reactPropName;
-              if (propName) {
-                const props = {
-                  [propName]: problemSolution.testCases[0].input[0],
-                };
-                previewOutput = userFunction(props);
-              } else {
-                previewOutput = `Error: 'reactPropName' is not defined for this React problem.`;
-                customConsole.error(previewOutput);
+            for (let i = 0; i < problemSolution.testCases.length; i++) {
+              try {
+                const propName = currentProblem.reactPropName;
+                if (propName) {
+                  const props = {
+                    [propName]: problemSolution.testCases[i].input[0],
+                  };
+                  previewOutputs.push(userFunction(props));
+                } else {
+                  const errorMsg = `Error: 'reactPropName' is not defined for this React problem.`;
+                  previewOutputs.push(errorMsg);
+                  customConsole.error(errorMsg);
+                }
+              } catch (err) {
+                const errorMsg = `Error in preview for test case ${i + 1}: ${
+                  (err as Error).message
+                }`;
+                previewOutputs.push(errorMsg);
+                customConsole.error(
+                  `Error rendering preview for test case ${i + 1}: ${
+                    (err as Error).message
+                  }`
+                );
               }
-            } catch (err) {
-              previewOutput = `Error in preview: ${(err as Error).message}`;
-              customConsole.error(
-                `Error rendering preview: ${(err as Error).message}`
-              );
             }
           }
-          setUserHtmlOutput(previewOutput);
+          setUserHtmlOutputs(previewOutputs);
         } else {
           const userFunction = new Function("console", "return " + code)(
             customConsole
           );
-          setUserHtmlOutput(null);
+          setUserHtmlOutputs([]);
           try {
             userFunction(
               problemSolution.testCases[0]?.input[0],
@@ -496,322 +537,29 @@ export function useTestPlatform() {
         customConsole.log(
           "Python code preview is static. Live execution is not supported."
         );
-        setUserHtmlOutput(null);
+        setUserHtmlOutputs([]);
       }
     } catch (error) {
-      setUserHtmlOutput(
-        `Compilation error for preview: ${(error as Error).message}`
-      );
-      customConsole.error(
-        `Compilation error for preview: ${(error as Error).message}`
-      );
+      const errorMsg = `Compilation error for preview: ${
+        (error as Error).message
+      }`;
+      setUserHtmlOutputs([errorMsg]);
+      customConsole.error(errorMsg);
     } finally {
       setConsoleOutput(capturedLogs);
     }
   }, [code, currentProblem, selectedEditorLanguage]);
 
-  const runTests = useCallback(async () => {
-    if (!currentProblem) return;
-
-    setIsRunningTests(true);
-    setShowResults(false);
-    setUserHtmlOutput(null);
-    setConsoleOutput([]);
-
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    const capturedLogs: string[] = [];
-    const customConsole = {
-      log: (...args: any[]) => {
-        capturedLogs.push(
-          args
-            .map((arg) => {
-              if (typeof arg === "object" && arg !== null) {
-                try {
-                  return JSON.stringify(arg, null, 2);
-                } catch (e) {
-                  return String(arg);
-                }
-              }
-              return String(arg);
-            })
-            .join(" ")
-        );
-      },
-      warn: (...args: any[]) =>
-        capturedLogs.push("WARN: " + args.map(String).join(" ")),
-      error: (...args: any[]) =>
-        capturedLogs.push("ERROR: " + args.map(String).join(" ")),
-    };
-
-    const problemSolution = currentProblem.solutions[selectedEditorLanguage];
-    if (!problemSolution) {
-      setTestResults([
-        {
-          testCase: "Language Not Supported",
-          input: null,
-          expected: null,
-          actual: null,
-          passed: false,
-          error: `Execution for ${selectedEditorLanguage} is not supported in this environment.`,
-        },
-      ]);
-      setIsRunningTests(false);
-      setShowResults(true);
-      markProblemAsCompleted(currentProblem.id);
-      localStorage.removeItem("inProgressTest");
-      return;
-    }
-
-    try {
-      if (selectedEditorLanguage === "javascript") {
-        if (currentProblem.id.startsWith("react-")) {
-          const results = [];
-          let latestHtmlOutput: string | null = null;
-
-          const React = {
-            createElement: (type: string, props: any, ...children: any[]) => {
-              const flatChildren = children
-                .flat()
-                .filter((child) => child !== null && child !== undefined);
-              let propsStr = "";
-              if (props) {
-                propsStr = Object.entries(props)
-                  .map(([key, value]) => {
-                    if (key === "className") return `className="${value}"`;
-                    if (key === "src") return `src="${value}"`;
-                    if (key === "alt") return `alt="${value}"`;
-                    return "";
-                  })
-                  .filter(Boolean)
-                  .join(" ");
-              }
-
-              if (type === "img") {
-                return `<${type} ${propsStr} />`;
-              }
-              return `<${type}${
-                propsStr ? " " + propsStr : ""
-              }>${flatChildren.join("")}</${type}>`;
-            },
-          };
-
-          let transpiledCode = "";
-          try {
-            transpiledCode =
-              Babel.transform(code, {
-                presets: ["react"], // support JSX
-              }).code || "";
-          } catch (e) {
-            setTestResults([
-              {
-                testCase: "Compilation Error",
-                input: null,
-                expected: null,
-                actual: null,
-                passed: false,
-                error: "Babel compile failed: " + (e as Error).message,
-              },
-            ]);
-            setUserHtmlOutput(`Error compiling code: ${(e as Error).message}`);
-            setConsoleOutput(capturedLogs);
-            setIsRunningTests(false);
-            setShowResults(true);
-            return;
-          }
-
-          let userFunction: any;
-
-          try {
-            const componentName = extractComponentName(code);
-            if (!componentName) {
-              setTestResults([
-                {
-                  testCase: "Error",
-                  input: null,
-                  expected: null,
-                  actual: null,
-                  passed: false,
-                  error:
-                    "Cannot detect component name. Make sure to name your function with PascalCase (e.g. UserList).",
-                },
-              ]);
-              return;
-            }
-            userFunction = new Function(
-              "React",
-              "console",
-              `${transpiledCode}; return ${componentName};`
-            )(React, customConsole);
-          } catch (err) {
-            setTestResults([
-              {
-                testCase: "Runtime Error",
-                input: null,
-                expected: null,
-                actual: null,
-                passed: false,
-                error: "Execution failed: " + (err as Error).message,
-              },
-            ]);
-            setUserHtmlOutput(`Error running code: ${(err as Error).message}`);
-            setConsoleOutput(capturedLogs);
-            setIsRunningTests(false);
-            setShowResults(true);
-            return;
-          }
-
-          if (problemSolution.testCases.length > 0) {
-            try {
-              const propName = currentProblem.reactPropName;
-              if (propName) {
-                const props = {
-                  [propName]: problemSolution.testCases[0].input[0],
-                };
-                latestHtmlOutput = userFunction(props);
-              } else {
-                latestHtmlOutput = `Error: 'reactPropName' is not defined for this React problem.`;
-                customConsole.error(latestHtmlOutput);
-              }
-            } catch (err) {
-              latestHtmlOutput = `Error rendering preview: ${
-                (err as Error).message
-              }`;
-              customConsole.error(
-                `Error rendering preview: ${(err as Error).message}`
-              );
-            }
-            setUserHtmlOutput(latestHtmlOutput);
-
-            for (let i = 0; i < problemSolution.testCases.length; i++) {
-              const testCase = problemSolution.testCases[i];
-              try {
-                let result: any;
-                const propName = currentProblem.reactPropName;
-                if (propName) {
-                  const props = { [propName]: testCase.input[0] };
-                  result = userFunction(props);
-                } else {
-                  result = `Error: 'reactPropName' is not defined for this React problem.`;
-                  customConsole.error(result);
-                }
-
-                const passed = result === testCase.expected;
-
-                results.push({
-                  testCase: i + 1,
-                  input: testCase.input,
-                  expected: testCase.expected,
-                  actual: result,
-                  passed: passed,
-                  error: null,
-                });
-              } catch (error) {
-                results.push({
-                  testCase: i + 1,
-                  input: testCase.input,
-                  expected: testCase.expected,
-                  actual: null,
-                  passed: false,
-                  error: (error as Error).message,
-                });
-              }
-            }
-
-            setTestResults(results);
-          }
-        } else {
-          const userFunction = new Function("console", "return " + code)(
-            customConsole
-          );
-          const results = [];
-
-          for (let i = 0; i < problemSolution.testCases.length; i++) {
-            const testCase = problemSolution.testCases[i];
-            try {
-              const result = userFunction(testCase.input[0], testCase.input[1]);
-              const passed =
-                JSON.stringify(result) === JSON.stringify(testCase.expected);
-
-              results.push({
-                testCase: i + 1,
-                input: testCase.input,
-                expected: testCase.expected,
-                actual: result,
-                passed: passed,
-                error: null,
-              });
-            } catch (error) {
-              results.push({
-                testCase: i + 1,
-                input: testCase.input,
-                expected: testCase.expected,
-                actual: null,
-                passed: false,
-                error: (error as Error).message,
-              });
-            }
-          }
-
-          setTestResults(results);
-        }
-      } else if (selectedEditorLanguage === "python") {
-        setTestResults([
-          {
-            testCase: "Execution",
-            input: null,
-            expected: null,
-            actual: null,
-            passed: false,
-            error:
-              "Live Python execution is not supported in this browser environment.",
-          },
-        ]);
-        customConsole.log(
-          "Python code is displayed, but live execution is not supported."
-        );
-      }
-    } catch (error) {
-      setTestResults([
-        {
-          testCase: "Compilation",
-          input: null,
-          expected: null,
-          actual: null,
-          passed: false,
-          error: "Code compilation failed: " + (error as Error).message,
-        },
-      ]);
-      setUserHtmlOutput(`Error compiling code: ${(error as Error).message}`);
-      customConsole.error(`Compilation error: ${(error as Error).message}`);
-    } finally {
-      setConsoleOutput(capturedLogs);
-    }
-
-    setIsRunningTests(false);
-    setShowResults(true);
-    markProblemAsCompleted(currentProblem.id);
-    localStorage.removeItem("inProgressTest");
-  }, [code, currentProblem, selectedEditorLanguage, markProblemAsCompleted]);
-
-  // Effect to trigger live preview and run tests on code change
   useEffect(() => {
     const handler = setTimeout(() => {
       updateLivePreviewAndConsole();
-      // Only run tests if not already running to prevent overlapping executions
-      if (!isRunningTests) {
-        runTests();
-      }
-    }, 500); // Debounce for 500ms
-
+    }, 500);
     return () => clearTimeout(handler);
   }, [
     code,
     currentProblem,
     selectedEditorLanguage,
     updateLivePreviewAndConsole,
-    runTests,
-    isRunningTests,
   ]);
 
   const hasErrors = useCallback(() => {
@@ -919,6 +667,276 @@ export function useTestPlatform() {
     [code, selectedEditorLanguage]
   );
 
+  const runTests = useCallback(async () => {
+    if (!currentProblem) return;
+
+    setIsRunningTests(true);
+    setShowResults(false);
+    setUserHtmlOutputs([]);
+    setConsoleOutput([]);
+
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    const capturedLogs: string[] = [];
+    const customConsole = {
+      log: (...args: any[]) => {
+        capturedLogs.push(
+          args
+            .map((arg) => {
+              if (typeof arg === "object" && arg !== null) {
+                try {
+                  return JSON.stringify(arg, null, 2);
+                } catch (e) {
+                  return String(arg);
+                }
+              }
+              return String(arg);
+            })
+            .join(" ")
+        );
+      },
+      warn: (...args: any[]) =>
+        capturedLogs.push("WARN: " + args.map(String).join(" ")),
+      error: (...args: any[]) =>
+        capturedLogs.push("ERROR: " + args.map(String).join(" ")),
+    };
+
+    const problemSolution = currentProblem.solutions[selectedEditorLanguage];
+    if (!problemSolution) {
+      setTestResults([
+        {
+          testCase: "Language Not Supported",
+          input: null,
+          expected: null,
+          actual: null,
+          passed: false,
+          error: `Execution for ${selectedEditorLanguage} is not supported in this environment.`,
+        },
+      ]);
+      setIsRunningTests(false);
+      setShowResults(true);
+      markProblemAsCompleted(currentProblem.id);
+      localStorage.removeItem("inProgressTest");
+      return;
+    }
+
+    try {
+      if (selectedEditorLanguage === "javascript") {
+        if (currentProblem.id.startsWith("react-")) {
+          const results = [];
+          const allHtmlOutputs: (string | null)[] = [];
+
+          const React = {
+            createElement: (type: string, props: any, ...children: any[]) => {
+              const flatChildren = children
+                .flat()
+                .filter((child) => child !== null && child !== undefined);
+              let propsStr = "";
+              if (props) {
+                propsStr = Object.entries(props)
+                  .map(([key, value]) => {
+                    if (key === "className") return `className="${value}"`;
+                    if (key === "src") return `src="${value}"`;
+                    if (key === "alt") return `alt="${value}"`;
+                    return "";
+                  })
+                  .filter(Boolean)
+                  .join(" ");
+              }
+
+              if (type === "img") {
+                return `<${type} ${propsStr} />`;
+              }
+              return `<${type}${
+                propsStr ? " " + propsStr : ""
+              }>${flatChildren.join("")}</${type}>`;
+            },
+          };
+
+          let transpiledCode = "";
+          try {
+            transpiledCode =
+              Babel.transform(code, {
+                presets: ["react"], // support JSX
+              }).code || "";
+          } catch (e) {
+            setTestResults([
+              {
+                testCase: "Compilation Error",
+                input: null,
+                expected: null,
+                actual: null,
+                passed: false,
+                error: "Babel compile failed: " + (e as Error).message,
+              },
+            ]);
+            setUserHtmlOutputs([
+              `Error compiling code: ${(e as Error).message}`,
+            ]);
+            setConsoleOutput(capturedLogs);
+            setIsRunningTests(false);
+            setShowResults(true);
+            return;
+          }
+
+          let userFunction: any;
+
+          try {
+            const componentName = extractComponentName(code);
+            if (!componentName) {
+              setTestResults([
+                {
+                  testCase: "Error",
+                  input: null,
+                  expected: null,
+                  actual: null,
+                  passed: false,
+                  error:
+                    "Cannot detect component name. Make sure to name your function with PascalCase (e.g. UserList).",
+                },
+              ]);
+              return;
+            }
+            userFunction = new Function(
+              "React",
+              "console",
+              `${transpiledCode}; return ${componentName};`
+            )(React, customConsole);
+          } catch (err) {
+            setTestResults([
+              {
+                testCase: "Runtime Error",
+                input: null,
+                expected: null,
+                actual: null,
+                passed: false,
+                error: "Execution failed: " + (err as Error).message,
+              },
+            ]);
+            setUserHtmlOutputs([
+              `Error running code: ${(err as Error).message}`,
+            ]);
+            setConsoleOutput(capturedLogs);
+            setIsRunningTests(false);
+            setShowResults(true);
+            return;
+          }
+
+          // Generate HTML outputs for all test cases
+          for (let i = 0; i < problemSolution.testCases.length; i++) {
+            const testCase = problemSolution.testCases[i];
+            try {
+              let result: any;
+              const propName = currentProblem.reactPropName;
+              if (propName) {
+                const props = { [propName]: testCase.input[0] };
+                result = userFunction(props);
+                allHtmlOutputs.push(result);
+              } else {
+                result = `Error: 'reactPropName' is not defined for this React problem.`;
+                allHtmlOutputs.push(result);
+                customConsole.error(result);
+              }
+
+              const passed = result === testCase.expected;
+
+              results.push({
+                testCase: i + 1,
+                input: testCase.input,
+                expected: testCase.expected,
+                actual: result,
+                passed: passed,
+                error: null,
+              });
+            } catch (error) {
+              allHtmlOutputs.push(`Error: ${(error as Error).message}`);
+              results.push({
+                testCase: i + 1,
+                input: testCase.input,
+                expected: testCase.expected,
+                actual: null,
+                passed: false,
+                error: (error as Error).message,
+              });
+            }
+          }
+
+          setUserHtmlOutputs(allHtmlOutputs);
+          setTestResults(results);
+        } else {
+          const userFunction = new Function("console", "return " + code)(
+            customConsole
+          );
+          const results = [];
+
+          for (let i = 0; i < problemSolution.testCases.length; i++) {
+            const testCase = problemSolution.testCases[i];
+            try {
+              const result = userFunction(testCase.input[0], testCase.input[1]);
+              const passed =
+                JSON.stringify(result) === JSON.stringify(testCase.expected);
+
+              results.push({
+                testCase: i + 1,
+                input: testCase.input,
+                expected: testCase.expected,
+                actual: result,
+                passed: passed,
+                error: null,
+              });
+            } catch (error) {
+              results.push({
+                testCase: i + 1,
+                input: testCase.input,
+                expected: testCase.expected,
+                actual: null,
+                passed: false,
+                error: (error as Error).message,
+              });
+            }
+          }
+
+          setTestResults(results);
+        }
+      } else if (selectedEditorLanguage === "python") {
+        setTestResults([
+          {
+            testCase: "Execution",
+            input: null,
+            expected: null,
+            actual: null,
+            passed: false,
+            error:
+              "Live Python execution is not supported in this browser environment.",
+          },
+        ]);
+        customConsole.log(
+          "Python code is displayed, but live execution is not supported."
+        );
+      }
+    } catch (error) {
+      setTestResults([
+        {
+          testCase: "Compilation",
+          input: null,
+          expected: null,
+          actual: null,
+          passed: false,
+          error: "Code compilation failed: " + (error as Error).message,
+        },
+      ]);
+      setUserHtmlOutputs([`Error compiling code: ${(error as Error).message}`]);
+      customConsole.error(`Compilation error: ${(error as Error).message}`);
+    } finally {
+      setConsoleOutput(capturedLogs);
+    }
+
+    setIsRunningTests(false);
+    setShowResults(true);
+    markProblemAsCompleted(currentProblem.id);
+    localStorage.removeItem("inProgressTest");
+  }, [code, currentProblem, selectedEditorLanguage, markProblemAsCompleted]);
+
   return {
     currentScreen,
     selectedProblemId,
@@ -928,11 +946,14 @@ export function useTestPlatform() {
     showRefreshModal,
     showTabWarning,
     showExitConfirmationModal,
+    showTimeUpModal,
+    showInactivityModal,
+    showFinishTestModal,
     violationCount,
     testResults,
     isRunningTests,
     showResults,
-    userHtmlOutput,
+    userHtmlOutputs, // Changed from userHtmlOutput to userHtmlOutputs
     consoleOutput,
     webcamStream,
     selectedEditorLanguage,
@@ -953,7 +974,7 @@ export function useTestPlatform() {
     setTestResults,
     setIsRunningTests,
     setShowResults,
-    setUserHtmlOutput,
+    setUserHtmlOutputs, // Changed from setUserHtmlOutput to setUserHtmlOutputs
     setConsoleOutput,
     setWebcamStream,
     setSelectedEditorLanguage,
@@ -968,6 +989,11 @@ export function useTestPlatform() {
     runTests,
     handleKeyDown,
     hasErrors,
-    formatTime, // Export formatTime from here for convenience
+    formatTime,
+    confirmTimeUp,
+    confirmInactivity,
+    handleFinishTest,
+    confirmFinishTest,
+    cancelFinishTest,
   };
 }

@@ -14,73 +14,80 @@ body {
 
 @layer base {
   :root {
+    /* Base Shadcn colors (light theme defaults) */
     --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
+    --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.4% 91.4%;
+    --input: 214.3 31.4% 91.4%;
+    --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Neo-brutalism colors - Light Theme */
+    --neobrutal-bg: 0 0% 96%; /* #F5F5F5 - Very light off-white/grey */
+    --neobrutal-text: 0 0% 15%; /* #262626 - Dark, almost black */
+    --neobrutal-border: 0 0% 25%; /* #404040 - Strong dark grey */
+    --neobrutal-card: 0 0% 100%; /* #FFFFFF - Pure white */
+    --neobrutal-softGreen: 120 60% 85%; /* #D9F2D9 - Muted light green */
+    --neobrutal-softGreenText: 120 60% 30%; /* #4D994D - Dark green */
+    --neobrutal-softYellow: 45 80% 85%; /* #FFF2D9 - Muted light yellow */
+    --neobrutal-softYellowText: 45 80% 30%; /* #99734D - Dark yellow/brown */
+    --neobrutal-softRed: 0 70% 85%; /* #F2D9D9 - Muted light red */
+    --neobrutal-softRedText: 0 70% 30%; /* #994D4D - Dark red */
+    --neobrutal-softBlue: 210 60% 85%; /* #D9EBF2 - Muted light blue */
+    --neobrutal-softBlueText: 210 60% 30%; /* #4D7399 - Dark blue */
+    --neobrutal-gray: 210 10% 90%; /* Light gray for secondary elements */
   }
+
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
+    /* Base Shadcn colors (dark theme defaults) */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+
+    /* Neo-brutalism colors - Dark Theme (Softened) */
+    --neobrutal-bg: 220 15% 15%; /* Soft dark grey-blue */
+    --neobrutal-text: 220 20% 90%; /* Light grey */
+    --neobrutal-border: 220 10% 50%; /* Medium grey for contrast */
+    --neobrutal-card: 220 15% 20%; /* Slightly lighter soft dark grey-blue */
+    --neobrutal-softGreen: 120 40% 35%; /* Muted dark green */
+    --neobrutal-softGreenText: 120 40% 75%; /* Lighter green */
+    --neobrutal-softYellow: 45 60% 35%; /* Muted dark yellow */
+    --neobrutal-softYellowText: 45 60% 75%; /* Lighter yellow */
+    --neobrutal-softRed: 0 50% 35%; /* Muted dark red */
+    --neobrutal-softRedText: 0 50% 75%; /* Lighter red */
+    --neobrutal-softBlue: 210 40% 35%; /* Muted dark blue */
+    --neobrutal-softBlueText: 210 40% 75%; /* Lighter blue */
+    --neobrutal-gray: 220 15% 25%; /* Darker gray for secondary elements */
   }
 }
 
@@ -91,4 +98,32 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Custom Scrollbar Styling for Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--neobrutal-bg); /* Use neobrutal background */
+  border-radius: 10px;
+  border: 1px solid var(--neobrutal-border); /* Add a border */
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--neobrutal-softBlue); /* Use a neobrutal accent color */
+  border-radius: 10px;
+  border: 2px solid var(--neobrutal-border); /* Add a border to the thumb */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--neobrutal-softBlueText); /* Darker on hover */
+}
+
+/* Custom Scrollbar Styling for Firefox */
+* {
+  scrollbar-width: thin; /* "auto" or "thin" */
+  scrollbar-color: var(--neobrutal-softBlue) var(--neobrutal-bg); /* thumb color track color */
 }

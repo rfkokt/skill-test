@@ -31,6 +31,7 @@ export const problemsData: { [key: string]: Problem } = {
     id: "two-sum",
     title: "Two Sum",
     difficulty: "Easy",
+    language: "javascript",
     description:
       "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.\n\nYou may assume that each input would have exactly one solution, and you may not use the same element twice.\n\nYou can return the answer in any order.",
     examples: [
@@ -74,6 +75,7 @@ export const problemsData: { [key: string]: Problem } = {
     id: "add-two-numbers",
     title: "Add Two Numbers",
     difficulty: "Medium",
+    language: "javascript",
     description:
       "You are given two non-empty linked lists representing two non-negative integers. The digits are stored in reverse order, and each of their nodes contains a single digit. Add the two numbers and return the sum as a linked list.\n\nYou may assume the two numbers do not contain any leading zero, except the number 0 itself.",
     examples: [
@@ -112,6 +114,7 @@ export const problemsData: { [key: string]: Problem } = {
     id: "react-user-list",
     title: "React User List Component",
     difficulty: "Easy",
+    language: "javascript",
     description:
       "Create a React component that renders a list of users. Each user should be displayed in a card format with their name, email, and status. Active users should have a green status indicator, while inactive users should have a red indicator.\n\nYou need to map over the users array and return the appropriate JSX elements.",
     examples: [
@@ -251,6 +254,7 @@ export const problemsData: { [key: string]: Problem } = {
     id: "react-product-grid",
     title: "Product Grid with Filtering",
     difficulty: "Medium",
+    language: "javascript",
     description:
       "Create a React component that renders a grid of products. The component should filter products based on availability and price range, then display them in a responsive grid layout.\n\nProducts should show image, name, price, and availability status. Only show products that are available and cost less than $100.",
     examples: [
@@ -375,6 +379,7 @@ export const problemsData: { [key: string]: Problem } = {
     id: "longest-substring",
     title: "Longest Substring Without Repeating Characters",
     difficulty: "Medium",
+    language: "javascript",
     description:
       "Given a string `s`, find the length of the longest substring without repeating characters.",
     examples: [
@@ -433,6 +438,7 @@ export const problemsData: { [key: string]: Problem } = {
     id: "median-arrays",
     title: "Median of Two Sorted Arrays",
     difficulty: "Hard",
+    language: "javascript",
     description:
       "Given two sorted arrays `nums1` and `nums2` of size `m` and `n` respectively, return the median of the two sorted arrays.\n\nThe overall run time complexity should be `O(log(m + n))`.",
     examples: [
@@ -520,6 +526,7 @@ export const problemsData: { [key: string]: Problem } = {
     id: "reverse-string",
     title: "Reverse String",
     difficulty: "Easy",
+    language: "python",
     description:
       "Given a string `s`, return the string with its characters reversed.",
     examples: [
@@ -552,6 +559,121 @@ export const problemsData: { [key: string]: Problem } = {
           { input: ["Python"], expected: "nohtyP" },
           { input: ["a"], expected: "a" },
           { input: [""], expected: "" },
+        ],
+      },
+    },
+  },
+  "react-laptop-list": {
+    id: "react-laptop-list",
+    title: "LaptopList - Filter 17 inch Laptops",
+    difficulty: "Easy",
+    examples: [
+      {
+        input: `laptops = [
+          { id: 1, name: "Asus TUF", type: "Laptop", screen_size: "17 inch" },
+          { id: 2, name: "Axioo", type: "Laptop", screen_size: "13 inch" }
+        ]`,
+        output: `<div class="laptop-list">
+          <div class="laptop-card">
+            <h3>Asus TUF</h3>
+            <p>Laptop</p>
+            <p>17 inch</p>
+          </div>
+        </div>`,
+        explanation: "Only laptops with 17 inch screens should be displayed",
+      },
+    ],
+    constraints: [
+      "Filter laptops where screen_size === '17 inch'",
+      "Each laptop has id, name, type, and screen_size properties",
+      "Handle empty results with 'No laptops found' message",
+    ],
+    tags: ["React", "JavaScript", "Array Methods", "JSX"],
+    estimatedTime: "1 min",
+    requiresWebcam: true,
+    language: "javascript",
+    languages: ["javascript"],
+    reactPropName: "laptops",
+    description: `
+Buat komponen React bernama \`LaptopList\` yang menerima props \`laptops\`.
+
+Tampilkan hanya laptop dengan \`screen_size === "17 inch"\` dalam daftar.
+
+Untuk setiap laptop, tampilkan:
+- Nama (\`name\`) dalam \`<h3>\`
+- Tipe (\`type\`) dalam \`<p>\`
+- Ukuran layar (\`screen_size\`) dalam \`<p>\`
+
+Jika tidak ada laptop dengan \`screen_size === "17 inch"\`, tampilkan \`<p class="no-laptops">No laptops found</p>\`.
+
+Gunakan JSX.
+    `.trim(),
+    solutions: {
+      javascript: {
+        initialCodeTemplate: `function LaptopList({ laptops }) {
+  const filteredLaptops = laptops.filter(laptop => laptop.screen_size === "17 inch");
+
+  if (filteredLaptops.length === 0) {
+    return <p className="no-laptops">No laptops found</p>;
+  }
+
+  return (
+    <div className="laptop-list">
+      {filteredLaptops.map(laptop => (
+        <div key={laptop.id} className="laptop-card">
+          <h3>{laptop.name}</h3>
+          <p>{laptop.type}</p>
+          <p>{laptop.screen_size}</p>
+        </div>
+      ))}
+    </div>
+  );
+}`,
+        testCases: [
+          {
+            input: [
+              [
+                {
+                  id: 1,
+                  name: "Asus TUF",
+                  type: "Laptop",
+                  screen_size: "17 inch",
+                },
+                {
+                  id: 2,
+                  name: "Axioo",
+                  type: "Laptop",
+                  screen_size: "13 inch",
+                },
+                {
+                  id: 3,
+                  name: "Zyrex",
+                  type: "Laptop",
+                  screen_size: "12 inch",
+                },
+              ],
+            ],
+            expected: `<div className=\"list\"><div className=\"card\"><h3>Asus TUF</h3><p>Laptop</p><p>17 inch</p></div><div className=\"card\"><h3>Axioo</h3><p>Laptop</p><p>13 inch</p></div><div className=\"card\"><h3>Zyrex</h3><p>Laptop</p><p>12 inch</p></div></div>`,
+          },
+          {
+            input: [
+              [
+                {
+                  id: 1,
+                  name: "Axioo",
+                  type: "Laptop",
+                  screen_size: "13 inch",
+                },
+                {
+                  id: 2,
+                  name: "Zyrex",
+                  type: "Laptop",
+                  screen_size: "12 inch",
+                },
+              ],
+            ],
+            expected: `<p className="no-laptops">No laptops found</p>`,
+          },
         ],
       },
     },
