@@ -14,7 +14,10 @@ interface Problem {
   constraints: string[];
   tags: string[];
   languages: string[];
-  reactPropName?: string; // New: Optional property for React problems to specify the main prop name
+  reactPropName?: string;
+  verificationCode: string;
+  requiresCoding: boolean; // Add this new flag
+  requiresVerificationCode: boolean; // Add this new flag
   solutions: {
     [key: string]: {
       initialCodeTemplate: string;
@@ -58,7 +61,10 @@ export const problemsData: { [key: string]: Problem } = {
     tags: ["Array", "Hash Table"],
     estimatedTime: "60 min",
     requiresWebcam: true,
-    languages: ["javascript"], // Specify supported languages
+    languages: ["javascript"],
+    verificationCode: "CODE123",
+    requiresCoding: true, // This problem requires coding
+    requiresVerificationCode: true, // This problem requires verification code
     solutions: {
       javascript: {
         initialCodeTemplate:
@@ -94,6 +100,9 @@ export const problemsData: { [key: string]: Problem } = {
     estimatedTime: "60 min",
     requiresWebcam: true,
     languages: ["javascript"],
+    verificationCode: "CODE456",
+    requiresCoding: true, // This problem requires coding
+    requiresVerificationCode: true, // This problem requires verification code
     solutions: {
       javascript: {
         initialCodeTemplate:
@@ -174,7 +183,10 @@ export const problemsData: { [key: string]: Problem } = {
     estimatedTime: "30 min",
     requiresWebcam: false,
     languages: ["javascript"],
-    reactPropName: "users", // Added for dynamic prop passing
+    reactPropName: "users",
+    verificationCode: "REACT789",
+    requiresCoding: true, // This problem requires coding
+    requiresVerificationCode: false, // This problem does NOT require verification code
     solutions: {
       javascript: {
         initialCodeTemplate: `function UserList({ users }) {
@@ -294,7 +306,10 @@ export const problemsData: { [key: string]: Problem } = {
     estimatedTime: "45 min",
     requiresWebcam: false,
     languages: ["javascript"],
-    reactPropName: "products", // Added for dynamic prop passing
+    reactPropName: "products",
+    verificationCode: "PROD101",
+    requiresCoding: true, // This problem requires coding
+    requiresVerificationCode: false, // This problem does NOT require verification code
     solutions: {
       javascript: {
         initialCodeTemplate: `function ProductGrid({ products }) {
@@ -406,7 +421,10 @@ export const problemsData: { [key: string]: Problem } = {
     tags: ["Hash Table", "String", "Sliding Window"],
     estimatedTime: "30 min",
     requiresWebcam: true,
-    languages: ["javascript", "python"], // Add Python support
+    languages: ["javascript", "python"],
+    verificationCode: "SUBSTR202",
+    requiresCoding: true, // This problem requires coding
+    requiresVerificationCode: true, // This problem requires verification code
     solutions: {
       javascript: {
         initialCodeTemplate: `function lengthOfLongestSubstring(s) {
@@ -465,7 +483,10 @@ export const problemsData: { [key: string]: Problem } = {
     tags: ["Array", "Binary Search", "Divide and Conquer"],
     estimatedTime: "45 min",
     requiresWebcam: true,
-    languages: ["javascript", "python"], // Add Python support
+    languages: ["javascript", "python"],
+    verificationCode: "MEDIAN303",
+    requiresCoding: true, // This problem requires coding
+    requiresVerificationCode: true, // This problem requires verification code
     solutions: {
       javascript: {
         initialCodeTemplate: `function findMedianSortedArrays(nums1, nums2) {
@@ -521,7 +542,6 @@ export const problemsData: { [key: string]: Problem } = {
       },
     },
   },
-  // New Python Problem
   "reverse-string": {
     id: "reverse-string",
     title: "Reverse String",
@@ -549,11 +569,14 @@ export const problemsData: { [key: string]: Problem } = {
     estimatedTime: "15 min",
     requiresWebcam: false,
     languages: ["python"],
+    verificationCode: "REV404",
+    requiresCoding: true, // This problem requires coding
+    requiresVerificationCode: false, // This problem does NOT require verification code
     solutions: {
       python: {
         initialCodeTemplate: `def reverse_string(s):
     # Write your solution here
-    return s[::-1]`, // Example solution for Python
+    return s[::-1]`,
         testCases: [
           { input: ["hello"], expected: "olleh" },
           { input: ["Python"], expected: "nohtyP" },
@@ -594,6 +617,9 @@ export const problemsData: { [key: string]: Problem } = {
     language: "javascript",
     languages: ["javascript"],
     reactPropName: "laptops",
+    verificationCode: "LAPTOP505",
+    requiresCoding: true, // This problem requires coding
+    requiresVerificationCode: true, // This problem requires verification code
     description: `
 Buat komponen React bernama \`LaptopList\` yang menerima props \`laptops\`.
 
@@ -653,7 +679,7 @@ Gunakan JSX.
                 },
               ],
             ],
-            expected: `<div className=\"list\"><div className=\"card\"><h3>Asus TUF</h3><p>Laptop</p><p>17 inch</p></div><div className=\"card\"><h3>Axioo</h3><p>Laptop</p><p>13 inch</p></div><div className=\"card\"><h3>Zyrex</h3><p>Laptop</p><p>12 inch</p></div></div>`,
+            expected: `<div className="laptop-list"><div className="laptop-card"><h3>Asus TUF</h3><p>Laptop</p><p>17 inch</p></div><div className="laptop-card"><h3>Axioo</h3><p>Laptop</p><p>13 inch</p></div><div className="laptop-card"><h3>Zyrex</h3><p>Laptop</p><p>12 inch</p></div></div>`,
           },
           {
             input: [
@@ -673,6 +699,222 @@ Gunakan JSX.
               ],
             ],
             expected: `<p className="no-laptops">No laptops found</p>`,
+          },
+        ],
+      },
+    },
+  },
+  "database-design": {
+    id: "database-design",
+    title: "E-commerce Database Design",
+    difficulty: "Medium",
+    language: "sql",
+    description:
+      "Design a database schema for an e-commerce platform. The platform needs to store information about users, products, orders, and reviews. Explain your design choices and the relationships between tables.",
+    examples: [
+      {
+        input: "Design a database for an e-commerce platform",
+        output:
+          "A comprehensive database design with tables for users, products, orders, and reviews",
+        explanation:
+          "The design should include primary keys, foreign keys, and appropriate relationships between tables.",
+      },
+    ],
+    constraints: [
+      "Must include tables for users, products, orders, and reviews",
+      "Define appropriate relationships between tables",
+      "Include primary keys and foreign keys",
+      "Consider data types for each column",
+    ],
+    tags: ["Database Design", "SQL", "E-commerce", "Schema Design"],
+    estimatedTime: "30 min",
+    requiresWebcam: false,
+    languages: ["sql"],
+    verificationCode: "DB101",
+    requiresCoding: false, // This problem does NOT require coding
+    requiresVerificationCode: false, // This problem does NOT require verification code
+    solutions: {
+      sql: {
+        initialCodeTemplate:
+          "-- Write your database schema design here\n-- Include CREATE TABLE statements and explanations",
+        testCases: [
+          {
+            input: ["Design a database schema"],
+            expected:
+              "A comprehensive database design with appropriate tables and relationships",
+          },
+        ],
+      },
+    },
+  },
+  "system-architecture": {
+    id: "system-architecture",
+    title: "Microservices Architecture",
+    difficulty: "Hard",
+    language: "text",
+    description:
+      "Design a microservices architecture for a video streaming platform like YouTube. Explain the different services, their responsibilities, and how they communicate with each other. Consider aspects like scalability, fault tolerance, and data consistency.",
+    examples: [
+      {
+        input:
+          "Design a microservices architecture for a video streaming platform",
+        output:
+          "A comprehensive architecture design with various microservices and their interactions",
+        explanation:
+          "The design should include services for user management, video upload/processing, recommendation engine, etc.",
+      },
+    ],
+    constraints: [
+      "Must address user authentication and authorization",
+      "Include video upload, processing, and streaming services",
+      "Consider search and recommendation functionality",
+      "Explain communication patterns between services",
+      "Address scalability and fault tolerance",
+    ],
+    tags: ["System Design", "Microservices", "Architecture", "Scalability"],
+    estimatedTime: "45 min",
+    requiresWebcam: false,
+    languages: ["text"],
+    verificationCode: "ARCH202",
+    requiresCoding: false, // This problem does NOT require coding
+    requiresVerificationCode: false, // This problem does NOT require verification code
+    solutions: {
+      text: {
+        initialCodeTemplate:
+          "// Write your architecture design here\n// No code is required, just a detailed explanation of your design",
+        testCases: [
+          {
+            input: ["Design a microservices architecture"],
+            expected:
+              "A comprehensive architecture design with appropriate services and communication patterns",
+          },
+        ],
+      },
+    },
+  },
+  "count-vowels": {
+    id: "count-vowels",
+    title: "Count Vowels in a String",
+    difficulty: "Easy",
+    language: "javascript",
+    description:
+      "Given a string `s`, return the number of vowels ('a', 'e', 'i', 'o', 'u') in it. The comparison should be case-insensitive.",
+    examples: [
+      {
+        input: `s = "hello"`,
+        output: `2`,
+        explanation: `The vowels are 'e' and 'o'.`,
+      },
+      {
+        input: `s = "Programming"`,
+        output: `4`,
+        explanation: `The vowels are 'o', 'a', 'i', 'i'.`,
+      },
+      {
+        input: `s = "Rhythm"`,
+        output: `0`,
+        explanation: `There are no vowels in "Rhythm".`,
+      },
+    ],
+    constraints: [
+      "0 <= s.length <= 1000",
+      "s consists of English letters, digits, symbols and spaces.",
+    ],
+    tags: ["String", "JavaScript", "Loop"],
+    estimatedTime: "15 min",
+    requiresWebcam: false,
+    languages: ["javascript"],
+    verificationCode: "VOWEL101",
+    requiresCoding: true,
+    requiresVerificationCode: true,
+    solutions: {
+      javascript: {
+        initialCodeTemplate: `function countVowels(s) {
+  // Write your solution here
+}`,
+        testCases: [
+          { input: ["hello"], expected: 2 },
+          { input: ["Programming"], expected: 4 },
+          { input: ["Rhythm"], expected: 0 },
+          { input: ["AEIOU"], expected: 5 },
+          { input: [""], expected: 0 },
+        ],
+      },
+    },
+  },
+  "react-task-list": {
+    id: "react-task-list",
+    title: "React Task List Component",
+    difficulty: "Easy",
+    language: "javascript",
+    description:
+      "Create a React component that displays a list of tasks. Each task should show its description and a checkbox indicating if it's completed. Completed tasks should have a strikethrough style.",
+    examples: [
+      {
+        input: `tasks = [
+  { id: 1, description: "Learn React", completed: true },
+  { id: 2, description: "Build a project", completed: false },
+  { id: 3, description: "Deploy to Netlify", completed: false }
+]`,
+        output: `<div class="task-list">
+  <div class="task-item completed">
+    <input type="checkbox" checked disabled />
+    <p><s>Learn React</s></p>
+  </div>
+  <div class="task-item">
+    <input type="checkbox" disabled />
+    <p>Build a project</p>
+  </div>
+  <div class="task-item">
+    <input type="checkbox" disabled />
+    <p>Deploy to Netlify</p>
+  </div>
+</div>`,
+        explanation:
+          "Tasks are rendered with a checkbox and strikethrough for completed tasks.",
+      },
+      {
+        input: `tasks = []`,
+        output: `<div class="task-list">
+  <p class="no-tasks">No tasks to display</p>
+</div>`,
+      },
+    ],
+    constraints: [
+      "tasks is an array of task objects",
+      "Each task has id (number), description (string), and completed (boolean)",
+      "Completed tasks should have a strikethrough style (e.g., using <s> tag or CSS)",
+      "Checkbox should be checked if completed and disabled",
+      "Handle empty arrays with 'No tasks to display' message",
+    ],
+    tags: ["React", "JavaScript", "Conditional Rendering", "JSX"],
+    estimatedTime: "30 min",
+    requiresWebcam: false,
+    languages: ["javascript"],
+    reactPropName: "tasks",
+    verificationCode: "TASKLIST202",
+    requiresCoding: true,
+    requiresVerificationCode: false, // This problem does NOT require verification code
+    solutions: {
+      javascript: {
+        initialCodeTemplate: `function TaskList({ tasks }) {
+  // Add your logic here. Use 'React.createElement()' to create elements.
+  // Example: console.log("Tasks:", tasks);
+  // Make sure you return a valid React element.
+}`,
+        testCases: [
+          {
+            input: [
+              [
+                { id: 1, description: "Do laundry", completed: true },
+                { id: 2, description: "Buy groceries", completed: false },
+              ],
+            ],
+            expected: `<div className="task-list"><div className="task-item completed"><input type="checkbox" checked="" disabled="" /><p><s>Do laundry</s></p></div><div className="task-item"><input type="checkbox" disabled="" /><p>Buy groceries</p></div></div>`,
+          },
+          {
+            input: [[]],
+            expected: `<div className="task-list"><p className="no-tasks">No tasks to display</p></div>`,
           },
         ],
       },
