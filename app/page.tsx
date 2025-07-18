@@ -26,6 +26,12 @@ import { problemsData } from "@/lib/problems";
 import { formatHtmlManually } from "@/lib/utils";
 // Add the missing imports for the FileText icon
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   ArrowLeft,
   Camera,
   Code,
@@ -815,69 +821,80 @@ export default function CodingTestPlatform() {
                   {testResults.length} tests passed.
                 </p>
               </div>
-              <div className="space-y-4">
+              <Accordion type="single" collapsible className="w-full">
                 {testResults.map((result, index) => (
-                  <div
-                    key={index}
-                    className="border-2 border-neobrutal-border rounded-lg p-4 shadow-[1px_1px_0px_0px_#333333]"
+                  <AccordionItem
+                    key={`test-result-${index}`}
+                    value={`item-${index}`}
+                    className="border-b-2 border-neobrutal-border shadow-[2px_2px_0px_0px_#333333] mb-4 rounded-lg overflow-hidden"
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold text-neobrutal-text">
-                        Test Case {result.testCase}
-                      </h3>
-                      <Badge
-                        className={
-                          result.passed
-                            ? "bg-neobrutal-softGreen text-neobrutal-softGreenText"
-                            : "bg-neobrutal-softRed text-neobrutal-softRedText"
-                        }
-                      >
-                        {result.passed ? "Passed" : "Failed"}
-                      </Badge>
-                    </div>
-                    <div className="text-sm text-neobrutal-text/90 space-y-3">
-                      {/* Input */}
-                      <div>
-                        <strong>Input:</strong>
-                        <pre className="whitespace-pre-wrap break-all text-neobrutal-text/90 bg-neobrutal-bg p-2 mt-1 rounded-md border border-neobrutal-border shadow-[1px_1px_0px_0px_#333333]">
-                          {JSON.stringify(result.input, null, 2)}
-                        </pre>
+                    <AccordionTrigger className="flex items-center justify-between p-4 bg-neobrutal-card text-neobrutal-text hover:bg-neobrutal-bg/90 border-b-2 border-neobrutal-border">
+                      <div className="flex flex-row items-center space-x-2">
+                        <h3 className="font-semibold text-neobrutal-text">
+                          Test Case {result.testCase}
+                        </h3>
+                        <Badge
+                          className={
+                            result.passed
+                              ? "bg-neobrutal-softGreen text-neobrutal-softGreenText"
+                              : "bg-neobrutal-softRed text-neobrutal-softRedText"
+                          }
+                        >
+                          {result.passed ? "Passed" : "Failed"}
+                        </Badge>
                       </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-4 bg-neobrutal-bg">
+                      <div className="text-sm text-neobrutal-text/90 space-y-3">
+                        {/* Input */}
+                        <div>
+                          <strong>Input:</strong>
+                          <pre className="whitespace-pre-wrap break-all text-neobrutal-text/90 bg-neobrutal-bg p-2 mt-1 rounded-md border border-neobrutal-border shadow-[1px_1px_0px_0px_#333333]">
+                            {JSON.stringify(result.input, null, 2)}
+                          </pre>
+                        </div>
 
-                      {/* Expected */}
-                      <div>
-                        <strong>Expected:</strong>
-                        <pre className="whitespace-pre-wrap break-all text-neobrutal-text/90 bg-neobrutal-bg p-2 mt-1 rounded-md border border-neobrutal-border shadow-[1px_1px_0px_0px_#333333]">
-                          {formatHtmlManually(
-                            JSON.stringify(result.expected, null, 2)
-                          )}
-                        </pre>
+                        {/* Expected */}
+                        <div>
+                          <strong>Expected:</strong>
+                          <pre className="whitespace-pre-wrap break-all text-neobrutal-text/90 bg-neobrutal-bg p-2 mt-1 rounded-md border border-neobrutal-border shadow-[1px_1px_0px_0px_#333333]">
+                            {formatHtmlManually(
+                              JSON.stringify(result.expected, null, 2)
+                            )}
+                          </pre>
+                        </div>
+
+                        {/* Actual */}
+                        <div>
+                          <strong>Actual:</strong>
+                          <pre className="whitespace-pre-wrap break-all text-neobrutal-text/90 bg-neobrutal-bg p-2 mt-1 rounded-md border border-neobrutal-border shadow-[1px_1px_0px_0px_#333333]">
+                            {formatHtmlManually(
+                              JSON.stringify(result.actual, null, 2)
+                            )}
+                          </pre>
+                        </div>
+
+                        {result.error && (
+                          <p className="text-neobrutal-softRedText mt-2">
+                            <strong>Error:</strong> {result.error}
+                          </p>
+                        )}
                       </div>
-
-                      {/* Actual */}
-                      <div>
-                        <strong>Actual:</strong>
-                        <pre className="whitespace-pre-wrap break-all text-neobrutal-text/90 bg-neobrutal-bg p-2 mt-1 rounded-md border border-neobrutal-border shadow-[1px_1px_0px_0px_#333333]">
-                          {formatHtmlManually(
-                            JSON.stringify(result.actual, null, 2)
-                          )}
-                        </pre>
-                      </div>
-
-                      {result.error && (
-                        <p className="text-neobrutal-softRedText mt-2">
-                          <strong>Error:</strong> {result.error}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                    </AccordionContent>
+                  </AccordionItem>
                 ))}
-              </div>
+              </Accordion>
               <Button
-                onClick={() => setShowResults(false)}
+                onClick={
+                  testResults.every((r) => r.passed)
+                    ? handleFinishTest
+                    : () => setShowResults(false)
+                }
                 className="mt-6 w-full bg-neobrutal-softBlue hover:bg-neobrutal-softBlue/90 text-neobrutal-softBlueText"
               >
-                Back to Editor
+                {testResults.every((r) => r.passed)
+                  ? "Selesai"
+                  : "Back to Editor"}
               </Button>
             </div>
           )}

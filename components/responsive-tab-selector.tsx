@@ -1,6 +1,5 @@
 "use client"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { cn } from "@/lib/utils"
 
 interface ResponsiveTabSelectorProps {
   items: { value: string; label: string }[]
@@ -22,7 +21,7 @@ export default function ResponsiveTabSelector({
   // To make it always a dropdown, we remove the conditional rendering based on isMobile.
   // We will always render the Select component.
   return (
-    <div className={cn("w-full", className)}>
+    <div className={className}>
       <Select value={selectedValue} onValueChange={onValueChange}>
         <SelectTrigger className="w-full border-2 border-neobrutal-border shadow-[2px_2px_0px_0px_#333333] bg-neobrutal-card text-neobrutal-text">
           <SelectValue placeholder="Select an option" />
