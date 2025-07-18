@@ -1,82 +1,98 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { formatHtml } from "@/lib/utils"
-import { ChevronDown, Code, Eye } from "lucide-react"
-import React from "react" // Import React for useState
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion" // Import Accordion components
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"; // Import Accordion components
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { formatHtml } from "@/lib/utils";
+import { ChevronDown, Code, Eye } from "lucide-react";
+import React from "react"; // Import React for useState
 
 interface HtmlPreviewProps {
-  expectedHtmlContent: (string | null)[]
-  userHtmlOutputs: (string | null)[] | null
+  expectedHtmlContent: (string | null)[];
+  userHtmlOutputs: (string | null)[] | null;
 }
 
 // Function to process HTML content for preview, adding inline styles for neobrutalism
 const processHtmlForPreview = (htmlString: string | null) => {
-  if (!htmlString) return ""
+  if (!htmlString) return "";
 
   // Replace className with class for valid HTML
   let processedHtml = htmlString
     .replace(/className="/g, 'class="')
     .replace(
       /className="ist"/g,
-      'class="list" style="padding: 20px; background: #F0F0F0; border-radius: 8px; border: 1px solid #E0E0E0;"', // Simplified styling
+      'class="list" style="padding: 20px; background: #F0F0F0; border-radius: 8px; border: 1px solid #E0E0E0;"' // Simplified styling
     )
     .replace(
       /className="card"/g,
-      'class="card" style="background: #FFFFFF; padding: 16px; margin-bottom: 12px; border-radius: 8px; border: 1px solid #E0E0E0;"', // Simplified styling
+      'class="card" style="background: #FFFFFF; padding: 16px; margin-bottom: 12px; border-radius: 8px; border: 1px solid #E0E0E0;"' // Simplified styling
     )
     .replace(
       /className="user-list"/g,
-      'class="user-list" style="padding: 20px; background: #F0F0F0; border-radius: 8px; border: 1px solid #E0E0E0;"', // Simplified styling
+      'class="user-list" style="padding: 20px; background: #F0F0F0; border-radius: 8px; border: 1px solid #E0E0E0;"' // Simplified styling
     )
     .replace(
       /className="user-card"/g,
-      'class="user-card" style="background: #FFFFFF; padding: 16px; margin-bottom: 12px; border-radius: 8px; border: 1px solid #E0E0E0;"', // Simplified styling
+      'class="user-card" style="background: #FFFFFF; padding: 16px; margin-bottom: 12px; border-radius: 8px; border: 1px solid #E0E0E0;"' // Simplified styling
     )
     .replace(
       /className="status active"/g,
-      'class="status active" style="background: #D4EDDA; color: #285A3B; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;"',
+      'class="status active" style="background: #D4EDDA; color: #285A3B; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;"'
     )
     .replace(
       /className="status inactive"/g,
-      'class="status inactive" style="background: #F8D7DA; color: #721C24; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;"',
+      'class="status inactive" style="background: #F8D7DA; color: #721C24; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;"'
     )
     .replace(
       /className="no-users"/g,
-      'class="no-users" style="text-align: center; color: #1A1A1A; font-style: italic; padding: 40px;"',
+      'class="no-users" style="text-align: center; color: #1A1A1A; font-style: italic; padding: 40px;"'
     )
     .replace(
       /className="product-grid"/g,
-      'class="product-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; padding: 20px; background: #F0F0F0; border-radius: 8px; border: 1px solid #E0E0E0;"', // Simplified styling
+      'class="product-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; padding: 20px; background: #F0F0F0; border-radius: 8px; border: 1px solid #E0E0E0;"' // Simplified styling
     )
     .replace(
       /className="product-card"/g,
-      'class="product-card" style="background: #FFFFFF; padding: 16px; border-radius: 8px; border: 1px solid #E0E0E0;"', // Simplified styling
+      'class="product-card" style="background: #FFFFFF; padding: 16px; border-radius: 8px; border: 1px solid #E0E0E0;"' // Simplified styling
     )
     .replace(
       /className="price"/g,
-      'class="price" style="font-size: 18px; font-weight: bold; color: #285A3B; margin: 8px 0;"',
+      'class="price" style="font-size: 18px; font-weight: bold; color: #285A3B; margin: 8px 0;"'
     )
     .replace(
       /className="available"/g,
-      'class="available" style="background: #D4EDDA; color: #285A3B; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;"',
+      'class="available" style="background: #D4EDDA; color: #285A3B; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;"'
     )
     .replace(
       /className="no-products"/g,
-      'class="no-products" style="text-align: center; color: #1A1A1A; font-style: italic; padding: 40px;"',
+      'class="no-products" style="text-align: center; color: #1A1A1A; font-style: italic; padding: 40px;"'
     )
-    .replace(/<h3>/g, '<h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: #111827;">')
-    .replace(/<p>/g, '<p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">')
+    .replace(
+      /<h3>/g,
+      '<h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: #111827;">'
+    )
+    .replace(
+      /<p>/g,
+      '<p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">'
+    )
     .replace(
       /<img /g,
-      '<img style="width: 100%; height: 120px; object-fit: cover; border-radius: 4px; margin-bottom: 8px; background: #e5e7eb; border: 1px solid #D0D0D0;" ', // Simplified styling
-    )
+      '<img style="width: 100%; height: 120px; object-fit: cover; border-radius: 4px; margin-bottom: 8px; background: #e5e7eb; border: 1px solid #D0D0D0;" ' // Simplified styling
+    );
   // Add inline styles for common shadcn/neobrutalism classes
   // This is a simplified approach; a more robust solution might involve a CSS parser or a headless browser.
   const styleMap: { [key: string]: string } = {
-    "bg-neobrutal-card": "background-color: #f0f0f0; border: 2px solid #333333; box-shadow: 4px 4px 0px 0px #333333;",
+    "bg-neobrutal-card":
+      "background-color: #f0f0f0; border: 2px solid #333333; box-shadow: 4px 4px 0px 0px #333333;",
     "text-neobrutal-text": "color: #333333;",
     "text-neobrutal-softGreenText": "color: #228B22;",
     "bg-neobrutal-softGreen": "background-color: #90EE90;",
@@ -150,8 +166,10 @@ const processHtmlForPreview = (htmlString: string | null) => {
     "max-h-32": "max-height: 8rem;",
     "overflow-y-auto": "overflow-y: auto;",
     "overflow-x-auto": "overflow-x: auto;",
-    "shadow-[inset_2px_2px_0px_0px_#333333]": "box-shadow: inset 2px 2px 0px 0px #333333;",
-    "shadow-[inset_0px_0px_0px_2px_#333333]": "box-shadow: inset 0px 0px 0px 2px #333333;",
+    "shadow-[inset_2px_2px_0px_0px_#333333]":
+      "box-shadow: inset 2px 2px 0px 0px #333333;",
+    "shadow-[inset_0px_0px_0px_2px_#333333]":
+      "box-shadow: inset 0px 0px 0px 2px #333333;",
     "shadow-[4px_4px_0px_0px_#333333]": "box-shadow: 4px 4px 0px 0px #333333;",
     "shadow-[1px_1px_0px_0px_#333333]": "box-shadow: 1px 1px 0px 0px #333333;",
     "active:shadow-[2px_2px_0px_0px_#333333]": "", // Handled by JS for active state
@@ -168,31 +186,42 @@ const processHtmlForPreview = (htmlString: string | null) => {
     "text-neobrutal-accentText": "color: #00008B;", // Example accent text color
     "bg-neobrutal-softRed/20": "background-color: rgba(255, 99, 71, 0.2);",
     // Add more as needed based on your Tailwind config
-  }
+  };
 
   // Apply inline styles based on classes found
   for (const [cls, style] of Object.entries(styleMap)) {
-    const regex = new RegExp(`class="([^"]*\\s)?${cls}(\\s[^"]*)?"`, "g")
+    const regex = new RegExp(`class="([^"]*\\s)?${cls}(\\s[^"]*)?"`, "g");
     processedHtml = processedHtml.replace(regex, (match, p1, p2) => {
-      const existingStyle = match.match(/style="([^"]*)"/)
-      const newStyle = existingStyle ? `${existingStyle[1]} ${style}` : style
+      const existingStyle = match.match(/style="([^"]*)"/);
+      const newStyle = existingStyle ? `${existingStyle[1]} ${style}` : style;
       return match
         .replace(/style="[^"]*"/, "")
-        .replace(`class="${p1 || ""}${cls}${p2 || ""}"`, `class="${p1 || ""}${cls}${p2 || ""}" style="${newStyle}"`)
-    })
+        .replace(
+          `class="${p1 || ""}${cls}${p2 || ""}"`,
+          `class="${p1 || ""}${cls}${p2 || ""}" style="${newStyle}"`
+        );
+    });
   }
 
-  return processedHtml
-}
+  return processedHtml;
+};
 
-export default function HtmlPreview({ expectedHtmlContent, userHtmlOutputs }: HtmlPreviewProps) {
-  const safeExpectedHtml = Array.isArray(expectedHtmlContent) ? expectedHtmlContent : []
-  const safeUserHtml = Array.isArray(userHtmlOutputs) ? userHtmlOutputs : []
+export default function HtmlPreview({
+  expectedHtmlContent,
+  userHtmlOutputs,
+}: HtmlPreviewProps) {
+  const safeExpectedHtml = Array.isArray(expectedHtmlContent)
+    ? expectedHtmlContent
+    : [];
+  const safeUserHtml = Array.isArray(userHtmlOutputs) ? userHtmlOutputs : [];
 
-  const hasMultipleTestCases = safeExpectedHtml.length > 1 || safeUserHtml.length > 1
+  const hasMultipleTestCases =
+    safeExpectedHtml.length > 1 || safeUserHtml.length > 1;
 
-  const defaultTab = safeExpectedHtml.length > 0 ? `expected-${0}` : ""
-  const [activeTab, setActiveTab] = React.useState<string | undefined>(defaultTab)
+  const defaultTab = safeExpectedHtml.length > 0 ? `expected-${0}` : "";
+  const [activeTab, setActiveTab] = React.useState<string | undefined>(
+    defaultTab
+  );
 
   return (
     <Card className="border-2 border-neobrutal-border shadow-[4px_4px_0px_0px_#333333] bg-neobrutal-card">
@@ -207,7 +236,9 @@ export default function HtmlPreview({ expectedHtmlContent, userHtmlOutputs }: Ht
           type="single"
           collapsible
           value={activeTab}
-          onValueChange={(value) => setActiveTab(value === activeTab ? undefined : value)}
+          onValueChange={(value) =>
+            setActiveTab(value === activeTab ? undefined : value)
+          }
           className="w-full"
         >
           {safeExpectedHtml.map((content, index) => (
@@ -217,13 +248,18 @@ export default function HtmlPreview({ expectedHtmlContent, userHtmlOutputs }: Ht
               className="border-b-2 border-neobrutal-border shadow-[2px_2px_0px_0px_#333333] mb-4 rounded-lg overflow-hidden"
             >
               <AccordionTrigger className="flex items-center justify-between p-4 bg-neobrutal-card text-neobrutal-text hover:bg-neobrutal-bg/90 border-b-2 border-neobrutal-border">
-                <span className="font-semibold">Expected {hasMultipleTestCases ? `Case ${index + 1}` : "Output"}</span>
+                <span className="font-semibold">
+                  Expected{" "}
+                  {hasMultipleTestCases ? `Case ${index + 1}` : "Output"}
+                </span>
               </AccordionTrigger>
               <AccordionContent className="p-4 bg-neobrutal-bg">
                 <div className="border-2 border-neobrutal-border rounded-lg p-4 bg-neobrutal-bg shadow-[2px_2px_0px_0px_#333333]">
-                  <h4 className="font-medium text-neobrutal-text mb-3">Rendered HTML:</h4>
+                  <h4 className="font-medium text-neobrutal-text mb-3">
+                    Rendered HTML:
+                  </h4>
                   <div
-                    className="w-full min-h-[100px] border-2 border-neobrutal-border rounded-lg p-4 bg-white overflow-auto shadow-[inset_2px_2px_0px_0px_#333333]"
+                    className="w-full min-h-[100px] border-2 border-neobrutal-border rounded-lg p-4 bg-background text-foreground overflow-auto shadow-[inset_2px_2px_0px_0px_#333333]"
                     dangerouslySetInnerHTML={{
                       __html: processHtmlForPreview(content),
                     }}
@@ -236,7 +272,9 @@ export default function HtmlPreview({ expectedHtmlContent, userHtmlOutputs }: Ht
                     </CollapsibleTrigger>
                     <CollapsibleContent className="mt-2">
                       <pre className="bg-neobrutal-border text-neobrutal-card p-3 rounded-lg text-xs font-mono overflow-x-auto shadow-[inset_2px_2px_0px_0px_#333333]">
-                        <code>{formatHtml(content) || "No HTML content to display."}</code>
+                        <code>
+                          {formatHtml(content) || "No HTML content to display."}
+                        </code>
                       </pre>
                     </CollapsibleContent>
                   </Collapsible>
@@ -252,13 +290,17 @@ export default function HtmlPreview({ expectedHtmlContent, userHtmlOutputs }: Ht
               className="border-b-2 border-neobrutal-border shadow-[2px_2px_0px_0px_#333333] mb-4 rounded-lg overflow-hidden"
             >
               <AccordionTrigger className="flex items-center justify-between p-4 bg-neobrutal-card text-neobrutal-text hover:bg-neobrutal-bg/90 border-b-2 border-neobrutal-border">
-                <span className="font-semibold">Your Output {hasMultipleTestCases ? `Case ${index + 1}` : ""}</span>
+                <span className="font-semibold">
+                  Your Output {hasMultipleTestCases ? `Case ${index + 1}` : ""}
+                </span>
               </AccordionTrigger>
               <AccordionContent className="p-4 bg-neobrutal-bg">
                 <div className="border-2 border-neobrutal-border rounded-lg p-4 bg-neobrutal-bg shadow-[2px_2px_0px_0px_#333333]">
-                  <h4 className="font-medium text-neobrutal-text mb-3">Rendered HTML:</h4>
+                  <h4 className="font-medium text-neobrutal-text mb-3">
+                    Rendered HTML:
+                  </h4>
                   <div
-                    className="w-full min-h-[100px] border-2 border-neobrutal-border rounded-lg p-4 bg-white overflow-auto shadow-[inset_2px_2px_0px_0px_#333333]"
+                    className="w-full min-h-[100px] border-2 border-neobrutal-border rounded-lg p-4 bg-background text-foreground overflow-auto shadow-[inset_2px_2px_0px_0px_#333333]"
                     dangerouslySetInnerHTML={{
                       __html: processHtmlForPreview(content),
                     }}
@@ -271,7 +313,9 @@ export default function HtmlPreview({ expectedHtmlContent, userHtmlOutputs }: Ht
                     </CollapsibleTrigger>
                     <CollapsibleContent className="mt-2">
                       <pre className="bg-neobrutal-border text-neobrutal-card p-3 rounded-lg text-xs font-mono overflow-x-auto shadow-[inset_2px_2px_0px_0px_#333333]">
-                        <code>{formatHtml(content) || "No HTML content to display."}</code>
+                        <code>
+                          {formatHtml(content) || "No HTML content to display."}
+                        </code>
                       </pre>
                     </CollapsibleContent>
                   </Collapsible>
@@ -282,5 +326,5 @@ export default function HtmlPreview({ expectedHtmlContent, userHtmlOutputs }: Ht
         </Accordion>
       </CardContent>
     </Card>
-  )
+  );
 }
