@@ -889,7 +889,7 @@ Gunakan JSX.
     ],
     tags: ["React", "JavaScript", "Conditional Rendering", "JSX"],
     estimatedTime: "30 min",
-    requiresWebcam: false,
+    requiresWebcam: true,
     languages: ["javascript"],
     reactPropName: "tasks",
     verificationCode: "TASKLIST202",

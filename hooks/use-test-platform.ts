@@ -305,7 +305,6 @@ export function useTestPlatform() {
     if (document.hidden) {
       setViolationCount((prev) => prev + 1);
       setShowTabWarning(true);
-      stopWebcam();
 
       if (!hiddenTimerRef.current) {
         hiddenStartTimeRef.current = Date.now();
@@ -331,7 +330,6 @@ export function useTestPlatform() {
     }
   }, [
     violationCount,
-    stopWebcam,
     failTestDueToInactivity,
     currentProblem,
     markProblemAsCompleted,
@@ -348,7 +346,6 @@ export function useTestPlatform() {
         setTimeout(() => {
           setShowRefreshModal(true);
         }, 0);
-        stopWebcam();
         return "";
       }
     },
@@ -376,17 +373,11 @@ export function useTestPlatform() {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      stopWebcam();
       if (hiddenTimerRef.current) {
         clearTimeout(hiddenTimerRef.current);
       }
     };
-  }, [
-    handleVisibilityChange,
-    handleBeforeUnload,
-    handleLeavingConfirmation,
-    stopWebcam,
-  ]);
+  }, [handleVisibilityChange, handleBeforeUnload, handleLeavingConfirmation]);
 
   const handleSelectProblem = useCallback(
     (problemId: string) => {
