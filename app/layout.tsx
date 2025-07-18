@@ -9,6 +9,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Coding Skill Test",
   description: "A platform for coding skill assessments",
+  generator: "v0.dev",
 };
 
 export default function RootLayout({
@@ -21,7 +22,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >

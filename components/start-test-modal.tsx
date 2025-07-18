@@ -28,7 +28,7 @@ export default function StartTestModal({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-neobrutal-card rounded-lg shadow-[8px_8px_0px_0px_#333333] border-2 border-neobrutal-border max-w-2xl w-full mx-4 text-neobrutal-text">
-        <div className="p-8">
+        <div className="p-4 sm:p-8">
           <div className="absolute top-4 right-4">
             <button onClick={onClose} className="text-neobrutal-text/60 hover:text-neobrutal-text transition-colors">
               <X className="w-6 h-6" />

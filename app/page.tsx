@@ -3,6 +3,7 @@ import ExitConfirmationModal from "@/components/exit-confirmation-modal";
 import FinishTestModal from "@/components/finish-test-modal";
 import HtmlPreview from "@/components/html-preview";
 import InactivityModal from "@/components/inactivity-modal";
+import MobileWarningModal from "@/components/mobile-warning-modal";
 import PasteWarningModal from "@/components/paste-warning-modal";
 import ProblemSelection from "@/components/problem-selection";
 import RefreshWarningModal from "@/components/refresh-warning-modal";
@@ -19,6 +20,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { useIsMobile } from "@/components/ui/use-mobile";
 import { useTestPlatform } from "@/hooks/use-test-platform";
 import { problemsData } from "@/lib/problems";
 import { formatHtmlManually } from "@/lib/utils";
@@ -42,7 +44,6 @@ export default function CodingTestPlatform() {
     currentScreen,
     selectedProblemId,
     timeLeft,
-    isTimerRunning,
     code,
     showRefreshModal,
     showTabWarning,
@@ -72,7 +73,6 @@ export default function CodingTestPlatform() {
     setCode,
     setShowRefreshModal,
     setShowTabWarning,
-    setShowExitConfirmationModal,
     setInProgressTest,
     handleGoBack,
     confirmExitAndFail,
@@ -96,6 +96,12 @@ export default function CodingTestPlatform() {
     handlePaste,
     handleClosePasteWarningModal,
   } = useTestPlatform();
+
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return <MobileWarningModal />;
+  }
 
   // Add a global guard at the very top of the component's return logic
   if (currentScreen !== "selection" && !currentProblem) {

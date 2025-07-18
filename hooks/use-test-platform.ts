@@ -314,7 +314,7 @@ export function useTestPlatform() {
         }, 30000);
       }
 
-      if (violationCount >= 300) {
+      if (violationCount >= 3) {
         alert("Test terminated due to multiple violations.");
         if (currentProblem) {
           markProblemAsCompleted(currentProblem.id);
