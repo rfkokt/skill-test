@@ -688,7 +688,7 @@ export default function CodingTestPlatform() {
                               value={code}
                               onChange={(e) => setCode(e.target.value)}
                               onKeyDown={handleKeyDown}
-                              onPaste={(e) => handlePaste(e)}
+                              // onPaste={(e) => handlePaste(e)}
                               onBlur={formatCode}
                               className="w-full h-full p-3 font-mono text-sm text-neobrutal-text bg-transparent border-none outline-none resize-none leading-6 overflow-y-auto placeholder:text-neobrutal-text/50 focus:ring-2 focus:ring-neobrutal-softBlue focus:ring-offset-2 focus:ring-offset-neobrutal-bg"
                               placeholder={`Write your ${lang} solution here...`}
