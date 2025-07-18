@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+import type { ClipboardEvent } from "react";
 
 import { problemsData } from "@/lib/problems";
 import {
@@ -52,6 +53,8 @@ export function useTestPlatform() {
   const [inProgressTest, setInProgressTest] = useState<InProgressTest | null>(
     null
   );
+  const [pasteWarningCount, setPasteWarningCount] = useState(0); // State for paste warnings
+  const [showPasteWarningModal, setShowPasteWarningModal] = useState(false); // State to control modal visibility
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -311,7 +314,7 @@ export function useTestPlatform() {
         }, 30000);
       }
 
-      if (violationCount >= 3) {
+      if (violationCount >= 300) {
         alert("Test terminated due to multiple violations.");
         if (currentProblem) {
           markProblemAsCompleted(currentProblem.id);
@@ -418,6 +421,34 @@ export function useTestPlatform() {
     setCurrentScreen("selection");
     setSelectedProblemId("");
   }, []);
+
+  const handlePaste = useCallback(
+    (event: ClipboardEvent<HTMLTextAreaElement>) => {
+      event.preventDefault();
+      setPasteWarningCount((prev) => prev + 1);
+      setShowPasteWarningModal(true);
+      if (pasteWarningCount >= 3) {
+        alert("Test terminated due to multiple violations.");
+        if (currentProblem) {
+          failTestDueToInactivity();
+          markProblemAsCompleted(currentProblem.id);
+        }
+        localStorage.removeItem("inProgressTest");
+        resetTestState();
+      } else {
+        if (hiddenTimerRef.current) {
+          clearTimeout(hiddenTimerRef.current);
+          hiddenTimerRef.current = null;
+        }
+        hiddenStartTimeRef.current = null;
+      }
+    },
+    [pasteWarningCount]
+  );
+
+  const handleClosePasteWarningModal = () => {
+    setShowPasteWarningModal(false);
+  };
 
   const updateLivePreviewAndConsole = useCallback(() => {
     setConsoleOutput([]);
@@ -751,23 +782,10 @@ export function useTestPlatform() {
         tabWidth: 2,
         printWidth: 80,
       });
-      // if (
-      //   typeof prettier !== "undefined" &&
-      //   typeof prettier.format === "function" &&
-      //   babelPlugin &&
-      //   estreePlugin
-      // ) {
-
-      // } else {
-      //   // Fallback basic formatting when Prettier isn't available
-      //   // formatted = simpleFormatJavaScript(code);
-      // }
 
       setCode(formatted.trim());
     } catch (error) {
       console.error("Error formatting code:", error);
-      // Fallback to basic formatting when Prettier fails
-      // setCode(simpleFormatJavaScript(code));
     }
   }, [code, selectedEditorLanguage, setCode]);
 
@@ -1120,6 +1138,8 @@ export function useTestPlatform() {
     showInactivityModal,
     showFinishTestModal,
     violationCount,
+    showPasteWarningModal,
+    pasteWarningCount,
     testResults,
     isRunningTests,
     showResults,
@@ -1141,6 +1161,8 @@ export function useTestPlatform() {
     setShowTabWarning,
     setShowExitConfirmationModal,
     setViolationCount,
+    setShowPasteWarningModal,
+    setPasteWarningCount,
     setTestResults,
     setIsRunningTests,
     setShowResults,
@@ -1154,6 +1176,8 @@ export function useTestPlatform() {
     confirmExitAndFail,
     cancelExit,
     handleSelectProblem,
+    handlePaste,
+    handleClosePasteWarningModal,
     handleStartTest,
     handleCancelStartTest,
     runTests,

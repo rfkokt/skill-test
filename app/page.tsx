@@ -3,6 +3,7 @@ import ExitConfirmationModal from "@/components/exit-confirmation-modal";
 import FinishTestModal from "@/components/finish-test-modal";
 import HtmlPreview from "@/components/html-preview";
 import InactivityModal from "@/components/inactivity-modal";
+import PasteWarningModal from "@/components/paste-warning-modal";
 import ProblemSelection from "@/components/problem-selection";
 import RefreshWarningModal from "@/components/refresh-warning-modal";
 import ResponsiveTabSelector from "@/components/responsive-tab-selector";
@@ -50,6 +51,8 @@ export default function CodingTestPlatform() {
     showInactivityModal,
     showFinishTestModal,
     violationCount,
+    pasteWarningCount,
+    showPasteWarningModal,
     testResults,
     isRunningTests,
     showResults,
@@ -88,8 +91,10 @@ export default function CodingTestPlatform() {
     handleFinishTest,
     confirmFinishTest,
     cancelFinishTest,
-    setShowResults, // Make sure setShowResults is available
-    formatCode, // Import formatCode
+    setShowResults,
+    formatCode,
+    handlePaste,
+    handleClosePasteWarningModal,
   } = useTestPlatform();
 
   // Add a global guard at the very top of the component's return logic
@@ -422,6 +427,11 @@ export default function CodingTestPlatform() {
           violationCount={violationCount}
         />
 
+        <PasteWarningModal
+          isOpen={showPasteWarningModal}
+          onClose={handleClosePasteWarningModal}
+          violationCount={pasteWarningCount}
+        />
         <ExitConfirmationModal
           isOpen={showExitConfirmationModal}
           onConfirm={confirmExitAndFail}
@@ -666,7 +676,8 @@ export default function CodingTestPlatform() {
                               value={code}
                               onChange={(e) => setCode(e.target.value)}
                               onKeyDown={handleKeyDown}
-                              onBlur={formatCode} // Add this line for auto-formatting on blur
+                              onPaste={(e) => handlePaste(e)}
+                              onBlur={formatCode}
                               className="w-full h-full p-3 font-mono text-sm text-neobrutal-text bg-transparent border-none outline-none resize-none leading-6 overflow-y-auto placeholder:text-neobrutal-text/50 focus:ring-2 focus:ring-neobrutal-softBlue focus:ring-offset-2 focus:ring-offset-neobrutal-bg"
                               placeholder={`Write your ${lang} solution here...`}
                               spellCheck={false}
