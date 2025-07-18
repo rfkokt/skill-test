@@ -699,8 +699,7 @@ export default function CodingTestPlatform() {
                       </div>
                     </ResizablePanel>
                     {currentProblem.id.startsWith("react-") &&
-                      selectedEditorLanguage === "javascript" &&
-                      !showResults && (
+                      selectedEditorLanguage === "javascript" && (
                         <>
                           <ResizableHandle withHandle />
                           <ResizablePanel defaultSize={35}>
