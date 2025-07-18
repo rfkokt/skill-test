@@ -1,8 +1,5 @@
 "use client";
 
-import type React from "react";
-import type { ClipboardEvent } from "react";
-
 import { problemsData } from "@/lib/problems";
 import {
   convertTimeToSeconds,
@@ -10,6 +7,9 @@ import {
   formatTime,
 } from "@/lib/utils";
 import * as Babel from "@babel/standalone";
+import * as faceapi from "face-api.js";
+import type React from "react";
+import type { ClipboardEvent } from "react";
 // @ts-ignore - Prettier plugins need to be imported this way
 import * as babelPlugin from "prettier/plugins/babel?external";
 // @ts-ignore - Prettier plugins need to be imported this way
@@ -55,11 +55,19 @@ export function useTestPlatform() {
   );
   const [pasteWarningCount, setPasteWarningCount] = useState(0); // State for paste warnings
   const [showPasteWarningModal, setShowPasteWarningModal] = useState(false); // State to control modal visibility
-
+  const [expression, setExpression] = useState<string | null>(null);
+  const [isLookingAtScreen, setIsLookingAtScreen] = useState<boolean | null>(
+    null
+  );
+  const [eyeAwayCount, setEyeAwayCount] = useState(0);
+  const [faceDetected, setFaceDetected] = useState<boolean>(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const detectionInterval = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hiddenTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hiddenStartTimeRef = useRef<number | null>(null);
+  const eyeAwayTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentProblem = selectedProblemId
     ? problemsData[selectedProblemId]
@@ -70,12 +78,102 @@ export function useTestPlatform() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       setWebcamStream(stream);
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
     } catch (err) {
       console.error("Error accessing webcam:", err);
-      alert(
-        "Could not access webcam. Please ensure you have a webcam and have granted permission."
-      );
+      alert("Could not access webcam. Please ensure permission is granted.");
     }
+  }, []);
+
+  const startDetection = async () => {
+    await faceapi.nets.tinyFaceDetector.loadFromUri("/models");
+    await faceapi.nets.faceLandmark68Net.loadFromUri("/models");
+    await faceapi.nets.faceExpressionNet.loadFromUri("/models");
+
+    const video = videoRef.current;
+    if (!video) return;
+
+    detectionInterval.current = setInterval(async () => {
+      if (video.readyState !== 4) return;
+
+      const results = await faceapi
+        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+        .withFaceLandmarks()
+        .withFaceExpressions();
+
+      const count = results.length;
+      setFaceDetected(count > 0);
+
+      if (count === 0) {
+        setExpression(null);
+        setIsLookingAtScreen(null);
+        return;
+      }
+
+      if (count === 1 && results[0]) {
+        const exp = results[0].expressions;
+        const maxExp = (
+          Object.keys(exp) as (keyof faceapi.FaceExpressions)[]
+        ).reduce((a, b) => (exp[a] > exp[b] ? a : b));
+        setExpression(maxExp);
+
+        const leftEye = results[0].landmarks.getLeftEye();
+        const rightEye = results[0].landmarks.getRightEye();
+
+        const getAspectRatio = (eye: faceapi.Point[]) => {
+          const width = Math.hypot(eye[3].x - eye[0].x, eye[3].y - eye[0].y);
+          const height = Math.hypot(eye[1].x - eye[5].x, eye[1].y - eye[5].y);
+          return width / height;
+        };
+
+        if (leftEye.length >= 6 && rightEye.length >= 6) {
+          const arLeft = getAspectRatio(leftEye);
+          const arRight = getAspectRatio(rightEye);
+          const avg = (arLeft + arRight) / 2;
+          const isLooking = avg > 3.0;
+
+          setIsLookingAtScreen(isLooking);
+          if (!isLooking) {
+            if (!eyeAwayTimerRef.current) {
+              eyeAwayTimerRef.current = setTimeout(() => {
+                setEyeAwayCount((prev) => {
+                  const next = prev + 1;
+                  return next;
+                });
+                eyeAwayTimerRef.current = null;
+              }, 2000);
+            }
+          }
+        }
+      }
+
+      // Kosongkan canvas
+      if (canvasRef.current) {
+        const ctx = canvasRef.current.getContext("2d");
+        if (!ctx) return;
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      }
+    }, 300);
+  };
+
+  useEffect(() => {
+    if (webcamStream && videoRef.current) {
+      console.log("🎯 Video element sudah siap, mulai deteksi wajah");
+      startDetection();
+    }
+  }, [webcamStream, videoRef.current]);
+
+  useEffect(() => {
+    return () => {
+      if (detectionInterval.current) clearInterval(detectionInterval.current);
+      if (webcamStream) {
+        webcamStream.getTracks().forEach((track) => track.stop());
+      }
+    };
   }, []);
 
   const stopWebcam = useCallback(() => {
@@ -373,6 +471,7 @@ export function useTestPlatform() {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("beforeunload", handleBeforeUnload);
+
       if (hiddenTimerRef.current) {
         clearTimeout(hiddenTimerRef.current);
       }
@@ -1143,6 +1242,7 @@ export function useTestPlatform() {
     textareaRef,
     videoRef,
     currentProblem,
+    eyeAwayCount,
     setCurrentScreen,
     setSelectedProblemId,
     setTimeLeft,
@@ -1180,6 +1280,7 @@ export function useTestPlatform() {
     handleFinishTest,
     confirmFinishTest,
     cancelFinishTest,
-    formatCode, // Add formatCode to the returned object
+    formatCode,
+    setEyeAwayCount,
   };
 }

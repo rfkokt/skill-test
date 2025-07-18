@@ -25,6 +25,7 @@ import { useTestPlatform } from "@/hooks/use-test-platform";
 import { problemsData } from "@/lib/problems";
 import { formatHtmlManually } from "@/lib/utils";
 // Add the missing imports for the FileText icon
+import EyeAwayWarningModal from "@/components/eye-warning-modal";
 import {
   Accordion,
   AccordionContent,
@@ -35,7 +36,6 @@ import {
   ArrowLeft,
   Camera,
   Code,
-  FileText,
   Flag,
   Moon,
   Sun,
@@ -72,6 +72,7 @@ export default function CodingTestPlatform() {
     textareaRef,
     videoRef,
     currentProblem,
+    eyeAwayCount,
     setCurrentScreen,
     setSelectedProblemId,
     setTimeLeft,
@@ -101,9 +102,11 @@ export default function CodingTestPlatform() {
     formatCode,
     handlePaste,
     handleClosePasteWarningModal,
+    setEyeAwayCount,
   } = useTestPlatform();
 
   const isMobile = useIsMobile();
+  console.log("debug eyeAwayCount", eyeAwayCount);
 
   if (isMobile) {
     return <MobileWarningModal />;
@@ -196,227 +199,6 @@ export default function CodingTestPlatform() {
 
     const expectedHtmlContents = getExpectedHtmlContents();
 
-    // Check if the problem requires coding
-    if (!currentProblem.requiresCoding) {
-      // Render a different UI for non-coding problems
-      return (
-        <div className="min-h-screen bg-neobrutal-bg text-neobrutal-text">
-          <RefreshWarningModal
-            isOpen={showRefreshModal}
-            onClose={() => setShowRefreshModal(false)}
-            onConfirm={() => {
-              if (
-                typeof window !== "undefined" &&
-                (window as any).handleLeavingConfirmation
-              ) {
-                (window as any).handleLeavingConfirmation();
-              }
-            }}
-          />
-
-          <TabWarningModal
-            isOpen={showTabWarning}
-            onClose={() => setShowTabWarning(false)}
-            violationCount={violationCount}
-          />
-
-          <ExitConfirmationModal
-            isOpen={showExitConfirmationModal}
-            onConfirm={confirmExitAndFail}
-            onCancel={cancelExit}
-          />
-
-          <TimeUpModal
-            isOpen={showTimeUpModal}
-            onConfirm={confirmTimeUp}
-            problemTitle={currentProblem.title}
-          />
-
-          <InactivityModal
-            isOpen={showInactivityModal}
-            onConfirm={confirmInactivity}
-            problemTitle={currentProblem.title}
-          />
-
-          <FinishTestModal
-            isOpen={showFinishTestModal}
-            onConfirm={confirmFinishTest}
-            onCancel={cancelFinishTest}
-            problemTitle={currentProblem.title}
-            timeLeft={timeLeft}
-            formatTime={formatTime}
-          />
-
-          {/* Floating Webcam Preview */}
-          {webcamStream && currentProblem.requiresWebcam && (
-            <div className="fixed top-4 right-4 z-50">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-32 h-24 rounded-lg shadow-[4px_4px_0px_0px_#333333] border-2 border-neobrutal-border object-cover"
-              />
-              <div className="absolute bottom-1 left-1 bg-neobrutal-softBlue text-neobrutal-softBlueText text-xs px-1 py-0.5 rounded-md flex items-center gap-1 border border-neobrutal-border">
-                <Camera className="w-3 h-3" /> Monitoring
-              </div>
-            </div>
-          )}
-
-          {/* Top Bar with Timer */}
-          <div className="border-b-2 border-neobrutal-border bg-neobrutal-card px-6 py-3 shadow-[0px_2px_0px_0px_#333333]">
-            <div className="flex items-center justify-between max-w-7xl mx-auto">
-              <div className="flex items-center space-x-4">
-                <div className="text-2xl font-mono font-bold text-neobrutal-text">
-                  {formatTime(timeLeft)}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleGoBack}
-                  className="flex items-center space-x-2 bg-transparent"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
-                </Button>
-              </div>
-              <div className="flex items-center space-x-4">
-                {violationCount > 0 && (
-                  <div className="text-sm text-neobrutal-softRedText font-medium">
-                    Violations: {violationCount}/4
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Main Content for Theory Problems */}
-          <div className="max-w-7xl mx-auto p-6 flex flex-col gap-6">
-            {/* Problem Description */}
-            <div className="bg-neobrutal-card rounded-lg p-6 border-2 border-neobrutal-border shadow-[4px_4px_0px_0px_#333333]">
-              {/* Problem Header */}
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-4">
-                  <h1 className="text-2xl font-bold text-neobrutal-text">
-                    {currentProblem.title}
-                  </h1>
-                  <Badge
-                    className={`${
-                      currentProblem.difficulty === "Easy"
-                        ? "bg-neobrutal-softGreen text-neobrutal-softGreenText"
-                        : currentProblem.difficulty === "Medium"
-                          ? "bg-neobrutal-softYellow text-neobrutal-softYellowText"
-                          : "bg-neobrutal-softRed text-neobrutal-softRedText"
-                    } hover:bg-current`}
-                  >
-                    {currentProblem.difficulty}
-                  </Badge>
-                  <Badge className="bg-neobrutal-softYellow text-neobrutal-softYellowText flex items-center gap-1">
-                    <FileText className="w-3 h-3" /> Theory
-                  </Badge>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div className="mb-8">
-                <h2 className="text-lg font-semibold text-neobrutal-text mb-4">
-                  Description
-                </h2>
-                <div className="text-neobrutal-text leading-relaxed space-y-4">
-                  {currentProblem.description
-                    .split("\n")
-                    .map((paragraph, index) => (
-                      <p key={index}>{paragraph}</p>
-                    ))}
-                </div>
-              </div>
-
-              {/* Examples */}
-              <div className="mb-8">
-                <h2 className="text-lg font-semibold text-neobrutal-text mb-4">
-                  Examples
-                </h2>
-                <div className="space-y-6">
-                  {currentProblem.examples.map((example, index) => (
-                    <div key={index} className="p-4 rounded-lg">
-                      <h3 className="font-semibold text-neobrutal-text mb-3">
-                        Example {index + 1}:
-                      </h3>
-                      <div className="font-mono text-sm space-y-1">
-                        <div>
-                          <strong>Input:</strong> {example.input}
-                        </div>
-                        <div>
-                          <strong>Output:</strong> {example.output}
-                        </div>
-                        {example.explanation && (
-                          <div className="text-neobrutal-text/80 mt-2">
-                            <strong>Explanation:</strong> {example.explanation}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Constraints */}
-              <div>
-                <h2 className="text-lg font-semibold text-neobrutal-text mb-4">
-                  Constraints
-                </h2>
-                <ul className="font-mono text-sm text-neobrutal-text/90 space-y-1">
-                  {currentProblem.constraints.map((constraint, index) => (
-                    <li key={index}>• {constraint}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* Answer Area for Theory Problems */}
-            <div className="bg-neobrutal-card rounded-lg p-6 border-2 border-neobrutal-border shadow-[4px_4px_0px_0px_#333333]">
-              <h2 className="text-lg font-semibold text-neobrutal-text mb-4">
-                Your Answer
-              </h2>
-              <div className="mb-6">
-                <textarea
-                  className="w-full min-h-[300px] p-4 font-mono text-sm bg-neobrutal-bg border-2 border-neobrutal-border rounded-lg shadow-[2px_2px_0px_0px_#333333] focus:outline-none focus:ring-2 focus:ring-neobrutal-softBlue"
-                  placeholder="Write your answer here..."
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                ></textarea>
-              </div>
-
-              <Button
-                onClick={handleFinishTest}
-                className="w-full mt-4 flex items-center justify-center space-x-2 bg-neobrutal-softGreen hover:bg-neobrutal-softGreen/90 text-neobrutal-softGreenText font-semibold py-3 shadow-[4px_4px_0px_0px_#333333] active:shadow-[2px_2px_0px_0px_#333333] active:translate-x-[2px] active:translate-y-[2px]"
-              >
-                <Flag className="w-4 h-4" />
-                <span>Submit Answer</span>
-              </Button>
-            </div>
-          </div>
-
-          {/* Floating Theme Toggle */}
-          <div className="fixed bottom-4 right-4 z-50">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="shadow-[4px_4px_0px_0px_#333333] border-2 border-neobrutal-border bg-neobrutal-card text-neobrutal-text hover:bg-neobrutal-card/90"
-              aria-label="Toggle theme"
-            >
-              {theme === "dark" ? (
-                <Sun className="h-5 w-5" />
-              ) : (
-                <Moon className="h-5 w-5" />
-              )}
-            </Button>
-          </div>
-        </div>
-      );
-    }
-
     // Original UI for coding problems continues below...
     return (
       <div className="min-h-screen bg-neobrutal-bg text-neobrutal-text">
@@ -444,6 +226,13 @@ export default function CodingTestPlatform() {
           onClose={handleClosePasteWarningModal}
           violationCount={pasteWarningCount}
         />
+
+        <EyeAwayWarningModal
+          isOpen={eyeAwayCount >= 3}
+          onClose={() => setEyeAwayCount(0)}
+          eyeAwayCount={eyeAwayCount}
+        />
+
         <ExitConfirmationModal
           isOpen={showExitConfirmationModal}
           onConfirm={confirmExitAndFail}
