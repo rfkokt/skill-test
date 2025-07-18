@@ -1,227 +1,261 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { problemsData } from "@/lib/problems"
-import { convertTimeToSeconds, extractComponentName, formatTime } from "@/lib/utils"
-import * as Babel from "@babel/standalone"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { problemsData } from "@/lib/problems";
+import {
+  convertTimeToSeconds,
+  extractComponentName,
+  formatTime,
+} from "@/lib/utils";
+import * as Babel from "@babel/standalone";
+// @ts-ignore - Prettier plugins need to be imported this way
+import * as babelPlugin from "prettier/plugins/babel?external";
+// @ts-ignore - Prettier plugins need to be imported this way
+import * as estreePlugin from "prettier/plugins/estree?external";
+import * as prettier from "prettier/standalone";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-const MAX_EXITS = 2 // Define max exits allowed
+const MAX_EXITS = 2; // Define max exits allowed
 
 interface InProgressTest {
-  problemId: string
-  timeLeft: number
-  exitCount: number
+  problemId: string;
+  timeLeft: number;
+  exitCount: number;
 }
 
 export function useTestPlatform() {
-  const [currentScreen, setCurrentScreen] = useState<"selection" | "start" | "test">("selection")
-  const [selectedProblemId, setSelectedProblemId] = useState<string>("")
-  const [timeLeft, setTimeLeft] = useState(0)
-  const [isTimerRunning, setIsTimerRunning] = useState(false)
-  const [code, setCode] = useState("")
-  const [showRefreshModal, setShowRefreshModal] = useState(false)
-  const [showTabWarning, setShowTabWarning] = useState(false)
-  const [showExitConfirmationModal, setShowExitConfirmationModal] = useState(false)
-  const [showTimeUpModal, setShowTimeUpModal] = useState(false)
-  const [showInactivityModal, setShowInactivityModal] = useState(false)
-  const [showFinishTestModal, setShowFinishTestModal] = useState(false)
-  const [violationCount, setViolationCount] = useState(0)
-  const [testResults, setTestResults] = useState<any[]>([])
-  const [isRunningTests, setIsRunningTests] = useState(false)
-  const [showResults, setShowResults] = useState(false)
-  const [userHtmlOutputs, setUserHtmlOutputs] = useState<(string | null)[]>([]) // Changed to array
-  const [consoleOutput, setConsoleOutput] = useState<string[]>([])
-  const [webcamStream, setWebcamStream] = useState<MediaStream | null>(null)
-  const [selectedEditorLanguage, setSelectedEditorLanguage] = useState<string>("javascript")
-  const [completedProblems, setCompletedProblems] = useState<string[]>([])
-  const [inProgressTest, setInProgressTest] = useState<InProgressTest | null>(null)
+  const [currentScreen, setCurrentScreen] = useState<
+    "selection" | "start" | "test"
+  >("selection");
+  const [selectedProblemId, setSelectedProblemId] = useState<string>("");
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [code, setCode] = useState("");
+  const [showRefreshModal, setShowRefreshModal] = useState(false);
+  const [showTabWarning, setShowTabWarning] = useState(false);
+  const [showExitConfirmationModal, setShowExitConfirmationModal] =
+    useState(false);
+  const [showTimeUpModal, setShowTimeUpModal] = useState(false);
+  const [showInactivityModal, setShowInactivityModal] = useState(false);
+  const [showFinishTestModal, setShowFinishTestModal] = useState(false);
+  const [violationCount, setViolationCount] = useState(0);
+  const [testResults, setTestResults] = useState<any[]>([]);
+  const [isRunningTests, setIsRunningTests] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [userHtmlOutputs, setUserHtmlOutputs] = useState<(string | null)[]>([]); // Changed to array
+  const [consoleOutput, setConsoleOutput] = useState<string[]>([]);
+  const [webcamStream, setWebcamStream] = useState<MediaStream | null>(null);
+  const [selectedEditorLanguage, setSelectedEditorLanguage] =
+    useState<string>("javascript");
+  const [completedProblems, setCompletedProblems] = useState<string[]>([]);
+  const [inProgressTest, setInProgressTest] = useState<InProgressTest | null>(
+    null
+  );
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const hiddenTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const hiddenStartTimeRef = useRef<number | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hiddenTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const hiddenStartTimeRef = useRef<number | null>(null);
 
-  const currentProblem = selectedProblemId ? problemsData[selectedProblemId] : null
+  const currentProblem = selectedProblemId
+    ? problemsData[selectedProblemId]
+    : null;
 
   // Webcam control functions
   const startWebcam = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
-      setWebcamStream(stream)
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setWebcamStream(stream);
     } catch (err) {
-      console.error("Error accessing webcam:", err)
-      alert("Could not access webcam. Please ensure you have a webcam and have granted permission.")
+      console.error("Error accessing webcam:", err);
+      alert(
+        "Could not access webcam. Please ensure you have a webcam and have granted permission."
+      );
     }
-  }, [])
+  }, []);
 
   const stopWebcam = useCallback(() => {
     if (webcamStream) {
-      webcamStream.getTracks().forEach((track) => track.stop())
-      setWebcamStream(null)
+      webcamStream.getTracks().forEach((track) => track.stop());
+      setWebcamStream(null);
     }
-  }, [webcamStream])
+  }, [webcamStream]);
 
   // Effect to set webcam stream to video element
   useEffect(() => {
     if (videoRef.current && webcamStream) {
-      videoRef.current.srcObject = webcamStream
+      videoRef.current.srcObject = webcamStream;
     }
     return () => {
       if (videoRef.current) {
-        videoRef.current.srcObject = null
+        videoRef.current.srcObject = null;
       }
-    }
-  }, [webcamStream])
+    };
+  }, [webcamStream]);
 
   // Load completed problems and in-progress test from localStorage on mount
   useEffect(() => {
-    const storedCompletedProblems = localStorage.getItem("completedProblems")
+    const storedCompletedProblems = localStorage.getItem("completedProblems");
     if (storedCompletedProblems) {
       try {
-        setCompletedProblems(JSON.parse(storedCompletedProblems))
+        setCompletedProblems(JSON.parse(storedCompletedProblems));
       } catch (e) {
-        console.error("Failed to parse completed problems from localStorage", e)
-        setCompletedProblems([])
+        console.error(
+          "Failed to parse completed problems from localStorage",
+          e
+        );
+        setCompletedProblems([]);
       }
     }
 
-    const storedInProgressTest = localStorage.getItem("inProgressTest")
+    const storedInProgressTest = localStorage.getItem("inProgressTest");
     if (storedInProgressTest) {
       try {
-        setInProgressTest(JSON.parse(storedInProgressTest))
+        setInProgressTest(JSON.parse(storedInProgressTest));
       } catch (e) {
-        console.error("Failed to parse in-progress test from localStorage", e)
-        setInProgressTest(null)
+        console.error("Failed to parse in-progress test from localStorage", e);
+        setInProgressTest(null);
       }
     }
-  }, [])
+  }, []);
 
   // Function to mark a problem as completed (failed or passed)
   const markProblemAsCompleted = useCallback((problemId: string) => {
     setCompletedProblems((prev) => {
-      const newCompleted = [...new Set([...prev, problemId])]
-      localStorage.setItem("completedProblems", JSON.stringify(newCompleted))
-      return newCompleted
-    })
-  }, [])
+      const newCompleted = [...new Set([...prev, problemId])];
+      localStorage.setItem("completedProblems", JSON.stringify(newCompleted));
+      return newCompleted;
+    });
+  }, []);
 
   const resetTestState = useCallback(() => {
-    setIsTimerRunning(false)
-    stopWebcam()
-    setCurrentScreen("selection")
-    setSelectedProblemId("")
-    setViolationCount(0)
-    setTestResults([])
-    setConsoleOutput([])
-    setUserHtmlOutputs([]) // Reset to empty array
-    setShowTimeUpModal(false)
-    setShowInactivityModal(false)
-    setShowFinishTestModal(false)
+    setIsTimerRunning(false);
+    stopWebcam();
+    setCurrentScreen("selection");
+    setSelectedProblemId("");
+    setViolationCount(0);
+    setTestResults([]);
+    setConsoleOutput([]);
+    setUserHtmlOutputs([]); // Reset to empty array
+    setShowTimeUpModal(false);
+    setShowInactivityModal(false);
+    setShowFinishTestModal(false);
     if (hiddenTimerRef.current) {
-      clearTimeout(hiddenTimerRef.current)
-      hiddenTimerRef.current = null
+      clearTimeout(hiddenTimerRef.current);
+      hiddenTimerRef.current = null;
     }
-    hiddenStartTimeRef.current = null
-  }, [stopWebcam])
+    hiddenStartTimeRef.current = null;
+  }, [stopWebcam]);
 
   // Function to fail the test due to inactivity - now shows modal instead of alert
   const failTestDueToInactivity = useCallback(() => {
-    setShowInactivityModal(true)
-  }, [])
+    setShowInactivityModal(true);
+  }, []);
 
   // Function to handle time up - now shows modal instead of alert
   const handleTimeUp = useCallback(() => {
-    setShowTimeUpModal(true)
-  }, [])
+    setShowTimeUpModal(true);
+  }, []);
 
   // Function to confirm time up modal
   const confirmTimeUp = useCallback(() => {
     if (currentProblem) {
-      markProblemAsCompleted(currentProblem.id)
+      markProblemAsCompleted(currentProblem.id);
     }
-    localStorage.removeItem("inProgressTest")
-    resetTestState()
-  }, [currentProblem, markProblemAsCompleted, resetTestState])
+    localStorage.removeItem("inProgressTest");
+    resetTestState();
+  }, [currentProblem, markProblemAsCompleted, resetTestState]);
 
   // Function to confirm inactivity modal
   const confirmInactivity = useCallback(() => {
     if (currentProblem) {
-      markProblemAsCompleted(currentProblem.id)
+      markProblemAsCompleted(currentProblem.id);
     }
-    localStorage.removeItem("inProgressTest")
-    resetTestState()
-  }, [currentProblem, markProblemAsCompleted, resetTestState])
+    localStorage.removeItem("inProgressTest");
+    resetTestState();
+  }, [currentProblem, markProblemAsCompleted, resetTestState]);
 
   // Function to handle finish test button
   const handleFinishTest = useCallback(() => {
-    setShowFinishTestModal(true)
-  }, [])
+    setShowFinishTestModal(true);
+  }, []);
 
   // Function to confirm finish test
   const confirmFinishTest = useCallback(() => {
-    setShowFinishTestModal(false)
+    setShowFinishTestModal(false);
     if (currentProblem) {
-      markProblemAsCompleted(currentProblem.id) // Mark problem as completed
+      markProblemAsCompleted(currentProblem.id); // Mark problem as completed
     }
-    localStorage.removeItem("inProgressTest") // Clear in-progress test
-    resetTestState() // Redirect to selection screen
-  }, [currentProblem, markProblemAsCompleted, resetTestState])
+    localStorage.removeItem("inProgressTest"); // Clear in-progress test
+    resetTestState(); // Redirect to selection screen
+  }, [currentProblem, markProblemAsCompleted, resetTestState]);
 
   // Function to cancel finish test
   const cancelFinishTest = useCallback(() => {
-    setShowFinishTestModal(false)
-  }, [])
+    setShowFinishTestModal(false);
+  }, []);
 
   // New function to handle exiting a test, including exit count logic
   const handleExitTest = useCallback(
     (isIntentionalExit: boolean) => {
       if (!currentProblem || currentScreen !== "test") {
-        resetTestState()
-        return
+        resetTestState();
+        return;
       }
 
-      let currentExitCount = inProgressTest?.exitCount || 0
+      let currentExitCount = inProgressTest?.exitCount || 0;
 
       if (isIntentionalExit) {
-        currentExitCount += 1
+        currentExitCount += 1;
       }
 
       if (currentExitCount >= MAX_EXITS) {
-        alert(`Anda telah keluar dari soal ini ${MAX_EXITS} kali. Tes dianggap gagal.`)
-        markProblemAsCompleted(currentProblem.id)
-        localStorage.removeItem("inProgressTest")
-        setInProgressTest(null)
-        resetTestState()
-        return
+        alert(
+          `Anda telah keluar dari soal ini ${MAX_EXITS} kali. Tes dianggap gagal.`
+        );
+        markProblemAsCompleted(currentProblem.id);
+        localStorage.removeItem("inProgressTest");
+        setInProgressTest(null);
+        resetTestState();
+        return;
       }
 
       const newInProgressState = {
         problemId: currentProblem.id,
         timeLeft: timeLeft,
         exitCount: currentExitCount,
-      }
-      setInProgressTest(newInProgressState)
-      localStorage.setItem("inProgressTest", JSON.stringify(newInProgressState))
+      };
+      setInProgressTest(newInProgressState);
+      localStorage.setItem(
+        "inProgressTest",
+        JSON.stringify(newInProgressState)
+      );
 
-      resetTestState()
+      resetTestState();
     },
-    [currentProblem, currentScreen, inProgressTest, timeLeft, markProblemAsCompleted, resetTestState],
-  )
+    [
+      currentProblem,
+      currentScreen,
+      inProgressTest,
+      timeLeft,
+      markProblemAsCompleted,
+      resetTestState,
+    ]
+  );
 
   const handleGoBack = useCallback(() => {
-    setShowExitConfirmationModal(true)
-  }, [])
+    setShowExitConfirmationModal(true);
+  }, []);
 
   const confirmExitAndFail = useCallback(() => {
-    setShowExitConfirmationModal(false)
-    handleExitTest(true)
-  }, [handleExitTest])
+    setShowExitConfirmationModal(false);
+    handleExitTest(true);
+  }, [handleExitTest]);
 
   const cancelExit = useCallback(() => {
-    setShowExitConfirmationModal(false)
-  }, [])
+    setShowExitConfirmationModal(false);
+  }, []);
 
   // Save inProgressTest when test is active and state changes
   useEffect(() => {
@@ -232,143 +266,167 @@ export function useTestPlatform() {
           problemId: selectedProblemId,
           timeLeft: timeLeft,
           exitCount: inProgressTest?.exitCount || 0,
-        }),
-      )
-    } else if (currentScreen === "selection" && !selectedProblemId && inProgressTest) {
-      localStorage.removeItem("inProgressTest")
-      setInProgressTest(null)
+        })
+      );
+    } else if (
+      currentScreen === "selection" &&
+      !selectedProblemId &&
+      inProgressTest
+    ) {
+      localStorage.removeItem("inProgressTest");
+      setInProgressTest(null);
     }
-  }, [currentScreen, isTimerRunning, selectedProblemId, timeLeft, inProgressTest])
+  }, [
+    currentScreen,
+    isTimerRunning,
+    selectedProblemId,
+    timeLeft,
+    inProgressTest,
+  ]);
 
   // Timer logic - updated to use modal instead of alert
   useEffect(() => {
-    let interval: NodeJS.Timeout
+    let interval: NodeJS.Timeout;
     if (isTimerRunning && timeLeft > 0) {
       interval = setInterval(() => {
-        setTimeLeft((time) => time - 1)
-      }, 1000)
+        setTimeLeft((time) => time - 1);
+      }, 1000);
     } else if (isTimerRunning && timeLeft === 0) {
-      handleTimeUp()
+      handleTimeUp();
     }
-    return () => clearInterval(interval)
-  }, [isTimerRunning, timeLeft, handleTimeUp])
+    return () => clearInterval(interval);
+  }, [isTimerRunning, timeLeft, handleTimeUp]);
 
   // Tab switching detection and refresh prevention
   const handleVisibilityChange = useCallback(() => {
     if (document.hidden) {
-      setViolationCount((prev) => prev + 1)
-      setShowTabWarning(true)
-      stopWebcam()
+      setViolationCount((prev) => prev + 1);
+      setShowTabWarning(true);
+      stopWebcam();
 
       if (!hiddenTimerRef.current) {
-        hiddenStartTimeRef.current = Date.now()
+        hiddenStartTimeRef.current = Date.now();
         hiddenTimerRef.current = setTimeout(() => {
-          failTestDueToInactivity()
-        }, 30000)
+          failTestDueToInactivity();
+        }, 30000);
       }
 
       if (violationCount >= 3) {
-        alert("Test terminated due to multiple violations.")
+        alert("Test terminated due to multiple violations.");
         if (currentProblem) {
-          markProblemAsCompleted(currentProblem.id)
+          markProblemAsCompleted(currentProblem.id);
         }
-        localStorage.removeItem("inProgressTest")
-        resetTestState()
+        localStorage.removeItem("inProgressTest");
+        resetTestState();
       }
     } else {
       if (hiddenTimerRef.current) {
-        clearTimeout(hiddenTimerRef.current)
-        hiddenTimerRef.current = null
+        clearTimeout(hiddenTimerRef.current);
+        hiddenTimerRef.current = null;
       }
-      hiddenStartTimeRef.current = null
+      hiddenStartTimeRef.current = null;
     }
-  }, [violationCount, stopWebcam, failTestDueToInactivity, currentProblem, markProblemAsCompleted, resetTestState])
+  }, [
+    violationCount,
+    stopWebcam,
+    failTestDueToInactivity,
+    currentProblem,
+    markProblemAsCompleted,
+    resetTestState,
+  ]);
 
   const handleBeforeUnload = useCallback(
     (e: BeforeUnloadEvent) => {
       // Only prevent if we are in the test screen and not intentionally leaving
       if (currentScreen === "test" && !isLeavingConfirmedRef.current) {
-        e.preventDefault()
-        e.returnValue = ""
+        e.preventDefault();
+        e.returnValue = "";
 
         setTimeout(() => {
-          setShowRefreshModal(true)
-        }, 0)
-        stopWebcam()
-        return ""
+          setShowRefreshModal(true);
+        }, 0);
+        stopWebcam();
+        return "";
       }
     },
-    [currentScreen, stopWebcam],
-  )
+    [currentScreen, stopWebcam]
+  );
 
-  const isLeavingConfirmedRef = useRef(false)
+  const isLeavingConfirmedRef = useRef(false);
 
   const handleLeavingConfirmation = useCallback(() => {
-    isLeavingConfirmedRef.current = true
-    handleExitTest(true)
-    stopWebcam()
-    window.location.reload()
-  }, [handleExitTest, stopWebcam])
+    isLeavingConfirmedRef.current = true;
+    handleExitTest(true);
+    stopWebcam();
+    window.location.reload();
+  }, [handleExitTest, stopWebcam]);
 
   useEffect(() => {
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-    window.addEventListener("beforeunload", handleBeforeUnload)
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("beforeunload", handleBeforeUnload);
 
     // Store the confirmation handler for the modal
     if (typeof window !== "undefined") {
-      ;(window as any).handleLeavingConfirmation = handleLeavingConfirmation
+      (window as any).handleLeavingConfirmation = handleLeavingConfirmation;
     }
 
     return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange)
-      window.removeEventListener("beforeunload", handleBeforeUnload)
-      stopWebcam()
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      stopWebcam();
       if (hiddenTimerRef.current) {
-        clearTimeout(hiddenTimerRef.current)
+        clearTimeout(hiddenTimerRef.current);
       }
-    }
-  }, [handleVisibilityChange, handleBeforeUnload, handleLeavingConfirmation, stopWebcam])
+    };
+  }, [
+    handleVisibilityChange,
+    handleBeforeUnload,
+    handleLeavingConfirmation,
+    stopWebcam,
+  ]);
 
   const handleSelectProblem = useCallback(
     (problemId: string) => {
       if (inProgressTest && inProgressTest.problemId !== problemId) {
-        localStorage.removeItem("inProgressTest")
-        setInProgressTest(null)
+        localStorage.removeItem("inProgressTest");
+        setInProgressTest(null);
       }
-      setSelectedProblemId(problemId)
-      setCurrentScreen("start")
+      setSelectedProblemId(problemId);
+      setCurrentScreen("start");
     },
-    [inProgressTest],
-  )
+    [inProgressTest]
+  );
 
   const handleStartTest = useCallback(() => {
     if (currentProblem) {
-      const defaultLang = currentProblem.languages.includes("javascript") ? "javascript" : currentProblem.languages[0]
-      setCode(currentProblem.solutions[defaultLang].initialCodeTemplate)
-      setSelectedEditorLanguage(defaultLang)
-      setCurrentScreen("test")
-      setIsTimerRunning(true)
-      setViolationCount(0) // Reset violation count when starting a new test
+      const defaultLang = currentProblem.languages.includes("javascript")
+        ? "javascript"
+        : currentProblem.languages[0];
+      setCode(currentProblem.solutions[defaultLang].initialCodeTemplate);
+      setSelectedEditorLanguage(defaultLang);
+      setCurrentScreen("test");
+      setIsTimerRunning(true);
+      setViolationCount(0); // Reset violation count when starting a new test
       if (currentProblem.requiresWebcam) {
-        startWebcam()
+        startWebcam();
       }
-      setTimeLeft(convertTimeToSeconds(currentProblem.estimatedTime))
+      setTimeLeft(convertTimeToSeconds(currentProblem.estimatedTime));
     }
-  }, [currentProblem, startWebcam])
+  }, [currentProblem, startWebcam]);
 
   const handleCancelStartTest = useCallback(() => {
-    setCurrentScreen("selection")
-    setSelectedProblemId("")
-  }, [])
+    setCurrentScreen("selection");
+    setSelectedProblemId("");
+  }, []);
 
   const updateLivePreviewAndConsole = useCallback(() => {
-    setConsoleOutput([])
+    setConsoleOutput([]);
     if (!currentProblem) {
-      setUserHtmlOutputs([])
-      return
+      setUserHtmlOutputs([]);
+      return;
     }
 
-    const capturedLogs: string[] = []
+    const capturedLogs: string[] = [];
     const customConsole = {
       log: (...args: any[]) => {
         capturedLogs.push(
@@ -376,25 +434,27 @@ export function useTestPlatform() {
             .map((arg) => {
               if (typeof arg === "object" && arg !== null) {
                 try {
-                  return JSON.stringify(arg, null, 2)
+                  return JSON.stringify(arg, null, 2);
                 } catch (e) {
-                  return String(arg)
+                  return String(arg);
                 }
               }
-              return String(arg)
+              return String(arg);
             })
-            .join(" "),
-        )
+            .join(" ")
+        );
       },
-      warn: (...args: any[]) => capturedLogs.push("WARN: " + args.map(String).join(" ")),
-      error: (...args: any[]) => capturedLogs.push("ERROR: " + args.map(String).join(" ")),
-    }
+      warn: (...args: any[]) =>
+        capturedLogs.push("WARN: " + args.map(String).join(" ")),
+      error: (...args: any[]) =>
+        capturedLogs.push("ERROR: " + args.map(String).join(" ")),
+    };
 
-    const problemSolution = currentProblem.solutions[selectedEditorLanguage]
+    const problemSolution = currentProblem.solutions[selectedEditorLanguage];
     if (!problemSolution) {
-      setUserHtmlOutputs([])
-      setConsoleOutput(["Live execution for this language is not supported."])
-      return
+      setUserHtmlOutputs([]);
+      setConsoleOutput(["Live execution for this language is not supported."]);
+      return;
     }
 
     try {
@@ -402,189 +462,394 @@ export function useTestPlatform() {
         if (currentProblem.id.startsWith("react-")) {
           const React = {
             createElement: (type: string, props: any, ...children: any[]) => {
-              const flatChildren = children.flat().filter((child) => child !== null && child !== undefined)
-              let propsStr = ""
+              const flatChildren = children
+                .flat()
+                .filter((child) => child !== null && child !== undefined);
+              let propsStr = "";
               if (props) {
                 propsStr = Object.entries(props)
                   .map(([key, value]) => {
-                    if (key === "className") return `className="${value}"`
-                    if (key === "src") return `src="${value}"`
-                    if (key === "alt") return `alt="${value}"`
-                    return ""
+                    if (key === "className") return `className="${value}"`;
+                    if (key === "src") return `src="${value}"`;
+                    if (key === "alt") return `alt="${value}"`;
+                    return "";
                   })
                   .filter(Boolean)
-                  .join(" ")
+                  .join(" ");
               }
 
               if (type === "img") {
-                return `<${type} ${propsStr} />`
+                return `<${type} ${propsStr} />`;
               }
-              return `<${type}${propsStr ? " " + propsStr : ""}>${flatChildren.join("")}</${type}>`
+              return `<${type}${propsStr ? " " + propsStr : ""}>${flatChildren.join("")}</${type}>`;
             },
-          }
+          };
 
-          const userFunction = new Function("React", "console", "return " + code)(React, customConsole)
+          const userFunction = new Function(
+            "React",
+            "console",
+            "return " + code
+          )(React, customConsole);
 
           // Generate preview outputs for all test cases
-          const previewOutputs: (string | null)[] = []
+          const previewOutputs: (string | null)[] = [];
           if (problemSolution.testCases.length > 0) {
             for (let i = 0; i < problemSolution.testCases.length; i++) {
               try {
-                const propName = currentProblem.reactPropName
+                const propName = currentProblem.reactPropName;
                 if (propName) {
                   const props = {
                     [propName]: problemSolution.testCases[i].input[0],
-                  }
-                  previewOutputs.push(userFunction(props))
+                  };
+                  previewOutputs.push(userFunction(props));
                 } else {
-                  const errorMsg = `Error: 'reactPropName' is not defined for this React problem.`
-                  previewOutputs.push(errorMsg)
-                  customConsole.error(errorMsg)
+                  const errorMsg = `Error: 'reactPropName' is not defined for this React problem.`;
+                  previewOutputs.push(errorMsg);
+                  customConsole.error(errorMsg);
                 }
               } catch (err) {
-                const errorMsg = `Error in preview for test case ${i + 1}: ${(err as Error).message}`
-                previewOutputs.push(errorMsg)
-                customConsole.error(`Error rendering preview for test case ${i + 1}: ${(err as Error).message}`)
+                const errorMsg = `Error in preview for test case ${i + 1}: ${(err as Error).message}`;
+                previewOutputs.push(errorMsg);
+                customConsole.error(
+                  `Error rendering preview for test case ${i + 1}: ${(err as Error).message}`
+                );
               }
             }
           }
-          setUserHtmlOutputs(previewOutputs)
+          setUserHtmlOutputs(previewOutputs);
         } else {
-          const userFunction = new Function("console", "return " + code)(customConsole)
-          setUserHtmlOutputs([])
+          const userFunction = new Function("console", "return " + code)(
+            customConsole
+          );
+          setUserHtmlOutputs([]);
           try {
-            userFunction(problemSolution.testCases[0]?.input[0], problemSolution.testCases[0]?.input[1])
+            userFunction(
+              problemSolution.testCases[0]?.input[0],
+              problemSolution.testCases[0]?.input[1]
+            );
           } catch (err) {
-            customConsole.error(`Error executing code for preview: ${(err as Error).message}`)
+            customConsole.error(
+              `Error executing code for preview: ${(err as Error).message}`
+            );
           }
         }
       } else if (selectedEditorLanguage === "python") {
-        customConsole.log("Python code preview is static. Live execution is not supported.")
-        setUserHtmlOutputs([])
+        customConsole.log(
+          "Python code preview is static. Live execution is not supported."
+        );
+        setUserHtmlOutputs([]);
       }
     } catch (error) {
-      const errorMsg = `Compilation error for preview: ${(error as Error).message}`
-      setUserHtmlOutputs([errorMsg])
-      customConsole.error(errorMsg)
+      const errorMsg = `Compilation error for preview: ${(error as Error).message}`;
+      setUserHtmlOutputs([errorMsg]);
+      customConsole.error(errorMsg);
     } finally {
-      setConsoleOutput(capturedLogs)
+      setConsoleOutput(capturedLogs);
     }
-  }, [code, currentProblem, selectedEditorLanguage])
+  }, [code, currentProblem, selectedEditorLanguage]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      updateLivePreviewAndConsole()
-    }, 500)
-    return () => clearTimeout(handler)
-  }, [code, currentProblem, selectedEditorLanguage, updateLivePreviewAndConsole])
+      updateLivePreviewAndConsole();
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [
+    code,
+    currentProblem,
+    selectedEditorLanguage,
+    updateLivePreviewAndConsole,
+  ]);
 
   const hasErrors = useCallback(() => {
-    const currentTemplate = currentProblem?.solutions[selectedEditorLanguage]?.initialCodeTemplate
-    if (!currentTemplate) return false
+    const currentTemplate =
+      currentProblem?.solutions[selectedEditorLanguage]?.initialCodeTemplate;
+    if (!currentTemplate) return false;
 
     if (selectedEditorLanguage === "javascript") {
-      return code.includes("// Write your solution here") || code.includes("// Add your logic here")
+      return (
+        code.includes("// Write your solution here") ||
+        code.includes("// Add your logic here")
+      );
     } else if (selectedEditorLanguage === "python") {
-      return code.includes("# Write your solution here")
+      return code.includes("# Write your solution here");
     }
-    return false
-  }, [code, currentProblem, selectedEditorLanguage])
+    return false;
+  }, [code, currentProblem, selectedEditorLanguage]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "/") {
-        e.preventDefault()
+      if (e.key === "Tab") {
+        e.preventDefault();
+        const textarea = textareaRef.current;
+        if (!textarea) return;
 
-        const textarea = textareaRef.current
-        if (!textarea) return
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const value = textarea.value;
+        const indentation = "  "; // 2 spaces for indentation
 
-        const start = textarea.selectionStart
-        const end = textarea.selectionEnd
-        const lines = code.split("\n")
+        if (start === end) {
+          // Single cursor: insert indentation
+          const newValue =
+            value.substring(0, start) + indentation + value.substring(end);
+          setCode(newValue);
+          setTimeout(() => {
+            textarea.selectionStart = textarea.selectionEnd =
+              start + indentation.length;
+          }, 0);
+        } else {
+          // Multi-line selection: indent/de-indent selected lines
+          const lines = value.split("\n");
+          const startLineIndex =
+            value.substring(0, start).split("\n").length - 1;
+          const endLineIndex = value.substring(0, end).split("\n").length - 1;
 
-        let startLine = 0
-        let charsCount = 0
+          const newCodeLines = [...lines];
+          let newSelectionStart = start;
+          let newSelectionEnd = end;
+
+          if (e.shiftKey) {
+            // De-indent
+            for (let i = startLineIndex; i <= endLineIndex; i++) {
+              if (newCodeLines[i].startsWith(indentation)) {
+                newCodeLines[i] = newCodeLines[i].substring(indentation.length);
+                if (i === startLineIndex)
+                  newSelectionStart = Math.max(
+                    0,
+                    newSelectionStart - indentation.length
+                  );
+                if (i === endLineIndex)
+                  newSelectionEnd = Math.max(
+                    0,
+                    newSelectionEnd - indentation.length
+                  );
+              } else if (newCodeLines[i].startsWith("\t")) {
+                newCodeLines[i] = newCodeLines[i].substring(1);
+                if (i === startLineIndex)
+                  newSelectionStart = Math.max(0, newSelectionStart - 1);
+                if (i === endLineIndex)
+                  newSelectionEnd = Math.max(0, newSelectionEnd - 1);
+              }
+            }
+          } else {
+            // Indent
+            for (let i = startLineIndex; i <= endLineIndex; i++) {
+              newCodeLines[i] = indentation + newCodeLines[i];
+              if (i === startLineIndex) newSelectionStart += indentation.length;
+              if (i === endLineIndex) newSelectionEnd += indentation.length;
+            }
+          }
+          setCode(newCodeLines.join("\n"));
+          setTimeout(() => {
+            textarea.selectionStart = newSelectionStart;
+            textarea.selectionEnd = newSelectionEnd;
+          }, 0);
+        }
+      } else if ((e.metaKey || e.ctrlKey) && e.key === "/") {
+        e.preventDefault();
+
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const lines = code.split("\n");
+
+        let startLine = 0;
+        let charsCount = 0;
         for (let i = 0; i < lines.length; i++) {
           if (charsCount + lines[i].length + 1 > start) {
-            startLine = i
-            break
+            startLine = i;
+            break;
           }
-          charsCount += lines[i].length + 1
+          charsCount += lines[i].length + 1;
         }
 
-        let endLine = startLine
+        let endLine = startLine;
         if (end > start) {
-          let currentChars = charsCount
+          let currentChars = charsCount;
           for (let i = startLine; i < lines.length; i++) {
             if (currentChars >= end) {
-              endLine = i
-              break
+              endLine = i;
+              break;
             }
-            currentChars += lines[i].length + 1
+            currentChars += lines[i].length + 1;
             if (i === lines.length - 1 && currentChars < end) {
-              endLine = i
+              endLine = i;
             }
           }
         }
 
-        let allCommented = true
-        const commentPrefix = selectedEditorLanguage === "python" ? "#" : "//"
+        let allCommented = true;
+        const commentPrefix = selectedEditorLanguage === "python" ? "#" : "//";
 
         for (let i = startLine; i <= endLine; i++) {
           if (!lines[i].trim().startsWith(commentPrefix)) {
-            allCommented = false
-            break
+            allCommented = false;
+            break;
           }
         }
 
-        const newLines = [...lines]
-        let newSelectionStart = start
-        let newSelectionEnd = end
+        const newLines = [...lines];
+        let newSelectionStart = start;
+        let newSelectionEnd = end;
 
         for (let i = startLine; i <= endLine; i++) {
-          const line = newLines[i]
+          const line = newLines[i];
           if (allCommented) {
-            const commentIndex = line.indexOf(commentPrefix)
+            const commentIndex = line.indexOf(commentPrefix);
             if (commentIndex !== -1) {
-              newLines[i] = line.substring(0, commentIndex) + line.substring(commentIndex + commentPrefix.length)
-              if (i === startLine) newSelectionStart = Math.max(0, start - commentPrefix.length)
-              if (i === endLine) newSelectionEnd = Math.max(0, end - commentPrefix.length)
+              newLines[i] =
+                line.substring(0, commentIndex) +
+                line.substring(commentIndex + commentPrefix.length);
+              if (i === startLine)
+                newSelectionStart = Math.max(0, start - commentPrefix.length);
+              if (i === endLine)
+                newSelectionEnd = Math.max(0, end - commentPrefix.length);
             }
           } else {
-            newLines[i] = commentPrefix + line
-            if (i === startLine) newSelectionStart = start + commentPrefix.length
-            if (i === endLine) newSelectionEnd = end + commentPrefix.length
+            newLines[i] = commentPrefix + line;
+            if (i === startLine)
+              newSelectionStart = start + commentPrefix.length;
+            if (i === endLine) newSelectionEnd = end + commentPrefix.length;
           }
         }
 
-        const newCode = newLines.join("\n")
-        setCode(newCode)
+        const newCode = newLines.join("\n");
+        setCode(newCode);
 
         setTimeout(() => {
           if (textareaRef.current) {
-            textareaRef.current.selectionStart = newSelectionStart
-            textareaRef.current.selectionEnd = newSelectionEnd
+            textareaRef.current.selectionStart = newSelectionStart;
+            textareaRef.current.selectionEnd = newSelectionEnd;
           }
-        }, 0)
+        }, 0);
       } else if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-        e.preventDefault()
-        runTests()
+        e.preventDefault();
+        runTests();
       }
     },
-    [code, selectedEditorLanguage],
-  )
+    [code, selectedEditorLanguage]
+  );
+
+  const formatCode = useCallback(async () => {
+    if (!code || selectedEditorLanguage !== "javascript") {
+      console.warn(
+        "Code formatting is currently only supported for JavaScript."
+      );
+      return;
+    }
+
+    try {
+      // Try to use Prettier if available
+      let formatted = code;
+      formatted = await prettier.format(code, {
+        parser: "babel",
+        plugins: [babelPlugin, estreePlugin],
+        singleQuote: true,
+        semi: false,
+        tabWidth: 2,
+        printWidth: 80,
+      });
+      // if (
+      //   typeof prettier !== "undefined" &&
+      //   typeof prettier.format === "function" &&
+      //   babelPlugin &&
+      //   estreePlugin
+      // ) {
+
+      // } else {
+      //   // Fallback basic formatting when Prettier isn't available
+      //   // formatted = simpleFormatJavaScript(code);
+      // }
+
+      setCode(formatted.trim());
+    } catch (error) {
+      console.error("Error formatting code:", error);
+      // Fallback to basic formatting when Prettier fails
+      // setCode(simpleFormatJavaScript(code));
+    }
+  }, [code, selectedEditorLanguage, setCode]);
+
+  // Basic JavaScript formatting fallback
+  const simpleFormatJavaScript = (code: string): string => {
+    try {
+      const stringLiterals: string[] = [];
+      const comments: string[] = [];
+
+      // Simpan string literals
+      code = code.replace(/(["'`])((?:\\.|(?!\1).)*?)\1/g, (match) => {
+        stringLiterals.push(match);
+        return `__STR_${stringLiterals.length - 1}__`;
+      });
+
+      // Simpan single-line comments
+      code = code.replace(/\/\/.*/g, (match) => {
+        comments.push(match);
+        return `__COMMENT_${comments.length - 1}__`;
+      });
+
+      // Tambahkan spasi di sekitar operator dasar (hindari '/')
+      code = code.replace(/([=+\-*%<>!&|^]=?)/g, " $1 ");
+
+      // Titik koma ke newline
+      code = code.replace(/;\s*/g, ";\n");
+
+      // Format block: tambahkan newline setelah `{`, sebelum `}`
+      code = code.replace(/(\))\s*{/g, "$1 {\n").replace(/}\s*/g, "\n}");
+
+      // Hindari pecah destructuring parameter
+      code = code.replace(
+        /function\s+(\w+)\s*\(\s*{\s*([^}]*)\s*}\s*\)/g,
+        (_, fn, params) => {
+          return `function ${fn}({ ${params.trim()} })`;
+        }
+      );
+
+      // Cleanup newline ganda
+      code = code.replace(/\n{2,}/g, "\n");
+
+      // Indentasi per baris
+      const lines = code.split("\n");
+      let indentLevel = 0;
+      const result = lines.map((line) => {
+        const trimmed = line.trim();
+        if (!trimmed) return "";
+
+        if (trimmed.startsWith("}")) indentLevel = Math.max(0, indentLevel - 1);
+        const indented = "  ".repeat(indentLevel) + trimmed;
+        if (trimmed.endsWith("{")) indentLevel += 1;
+
+        return indented;
+      });
+
+      // Kembalikan komentar & string
+      let final = result.join("\n");
+      stringLiterals.forEach((s, i) => {
+        final = final.replace(`__STR_${i}__`, s);
+      });
+      comments.forEach((c, i) => {
+        final = final.replace(`__COMMENT_${i}__`, c);
+      });
+
+      return final.trim();
+    } catch (err) {
+      console.error("Format failed:", err);
+      return code;
+    }
+  };
 
   const runTests = useCallback(async () => {
-    if (!currentProblem) return
+    if (!currentProblem) return;
 
-    setIsRunningTests(true)
-    setShowResults(false)
-    setUserHtmlOutputs([])
-    setConsoleOutput([])
+    setIsRunningTests(true);
+    setShowResults(false);
+    setUserHtmlOutputs([]);
+    setConsoleOutput([]);
 
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    const capturedLogs: string[] = []
+    const capturedLogs: string[] = [];
     const customConsole = {
       log: (...args: any[]) => {
         capturedLogs.push(
@@ -592,21 +857,23 @@ export function useTestPlatform() {
             .map((arg) => {
               if (typeof arg === "object" && arg !== null) {
                 try {
-                  return JSON.stringify(arg, null, 2)
+                  return JSON.stringify(arg, null, 2);
                 } catch (e) {
-                  return String(arg)
+                  return String(arg);
                 }
               }
-              return String(arg)
+              return String(arg);
             })
-            .join(" "),
-        )
+            .join(" ")
+        );
       },
-      warn: (...args: any[]) => capturedLogs.push("WARN: " + args.map(String).join(" ")),
-      error: (...args: any[]) => capturedLogs.push("ERROR: " + args.map(String).join(" ")),
-    }
+      warn: (...args: any[]) =>
+        capturedLogs.push("WARN: " + args.map(String).join(" ")),
+      error: (...args: any[]) =>
+        capturedLogs.push("ERROR: " + args.map(String).join(" ")),
+    };
 
-    const problemSolution = currentProblem.solutions[selectedEditorLanguage]
+    const problemSolution = currentProblem.solutions[selectedEditorLanguage];
     if (!problemSolution) {
       setTestResults([
         {
@@ -617,49 +884,51 @@ export function useTestPlatform() {
           passed: false,
           error: `Execution for ${selectedEditorLanguage} is not supported in this environment.`,
         },
-      ])
-      setIsRunningTests(false)
-      setShowResults(true)
-      markProblemAsCompleted(currentProblem.id)
-      localStorage.removeItem("inProgressTest")
-      return
+      ]);
+      setIsRunningTests(false);
+      setShowResults(true);
+      markProblemAsCompleted(currentProblem.id);
+      localStorage.removeItem("inProgressTest");
+      return;
     }
 
     try {
       if (selectedEditorLanguage === "javascript") {
         if (currentProblem.id.startsWith("react-")) {
-          const results = []
-          const allHtmlOutputs: (string | null)[] = []
+          const results = [];
+          const allHtmlOutputs: (string | null)[] = [];
 
           const React = {
             createElement: (type: string, props: any, ...children: any[]) => {
-              const flatChildren = children.flat().filter((child) => child !== null && child !== undefined)
-              let propsStr = ""
+              const flatChildren = children
+                .flat()
+                .filter((child) => child !== null && child !== undefined);
+              let propsStr = "";
               if (props) {
                 propsStr = Object.entries(props)
                   .map(([key, value]) => {
-                    if (key === "className") return `className="${value}"`
-                    if (key === "src") return `src="${value}"`
-                    if (key === "alt") return `alt="${value}"`
-                    return ""
+                    if (key === "className") return `className="${value}"`;
+                    if (key === "src") return `src="${value}"`;
+                    if (key === "alt") return `alt="${value}"`;
+                    return "";
                   })
                   .filter(Boolean)
-                  .join(" ")
+                  .join(" ");
               }
 
               if (type === "img") {
-                return `<${type} ${propsStr} />`
+                return `<${type} ${propsStr} />`;
               }
-              return `<${type}${propsStr ? " " + propsStr : ""}>${flatChildren.join("")}</${type}>`
+              return `<${type}${propsStr ? " " + propsStr : ""}>${flatChildren.join("")}</${type}>`;
             },
-          }
+          };
 
-          let transpiledCode = ""
+          let transpiledCode = "";
           try {
             transpiledCode =
               Babel.transform(code, {
                 presets: ["react"], // support JSX
-              }).code || ""
+              }).code || "";
           } catch (e) {
             setTestResults([
               {
@@ -670,18 +939,20 @@ export function useTestPlatform() {
                 passed: false,
                 error: "Babel compile failed: " + (e as Error).message,
               },
-            ])
-            setUserHtmlOutputs([`Error compiling code: ${(e as Error).message}`])
-            setConsoleOutput(capturedLogs)
-            setIsRunningTests(false)
-            setShowResults(true)
-            return
+            ]);
+            setUserHtmlOutputs([
+              `Error compiling code: ${(e as Error).message}`,
+            ]);
+            setConsoleOutput(capturedLogs);
+            setIsRunningTests(false);
+            setShowResults(true);
+            return;
           }
 
-          let userFunction: any
+          let userFunction: any;
 
           try {
-            const componentName = extractComponentName(code)
+            const componentName = extractComponentName(code);
             if (!componentName) {
               setTestResults([
                 {
@@ -693,13 +964,14 @@ export function useTestPlatform() {
                   error:
                     "Cannot detect component name. Make sure to name your function with PascalCase (e.g. UserList).",
                 },
-              ])
-              return
+              ]);
+              return;
             }
-            userFunction = new Function("React", "console", `${transpiledCode}; return ${componentName};`)(
-              React,
-              customConsole,
-            )
+            userFunction = new Function(
+              "React",
+              "console",
+              `${transpiledCode}; return ${componentName};`
+            )(React, customConsole);
           } catch (err) {
             setTestResults([
               {
@@ -710,31 +982,33 @@ export function useTestPlatform() {
                 passed: false,
                 error: "Execution failed: " + (err as Error).message,
               },
-            ])
-            setUserHtmlOutputs([`Error running code: ${(err as Error).message}`])
-            setConsoleOutput(capturedLogs)
-            setIsRunningTests(false)
-            setShowResults(true)
-            return
+            ]);
+            setUserHtmlOutputs([
+              `Error running code: ${(err as Error).message}`,
+            ]);
+            setConsoleOutput(capturedLogs);
+            setIsRunningTests(false);
+            setShowResults(true);
+            return;
           }
 
           // Generate HTML outputs for all test cases
           for (let i = 0; i < problemSolution.testCases.length; i++) {
-            const testCase = problemSolution.testCases[i]
+            const testCase = problemSolution.testCases[i];
             try {
-              let result: any
-              const propName = currentProblem.reactPropName
+              let result: any;
+              const propName = currentProblem.reactPropName;
               if (propName) {
-                const props = { [propName]: testCase.input[0] }
-                result = userFunction(props)
-                allHtmlOutputs.push(result)
+                const props = { [propName]: testCase.input[0] };
+                result = userFunction(props);
+                allHtmlOutputs.push(result);
               } else {
-                result = `Error: 'reactPropName' is not defined for this React problem.`
-                allHtmlOutputs.push(result)
-                customConsole.error(result)
+                result = `Error: 'reactPropName' is not defined for this React problem.`;
+                allHtmlOutputs.push(result);
+                customConsole.error(result);
               }
 
-              const passed = result === testCase.expected
+              const passed = result === testCase.expected;
 
               results.push({
                 testCase: i + 1,
@@ -743,9 +1017,9 @@ export function useTestPlatform() {
                 actual: result,
                 passed: passed,
                 error: null,
-              })
+              });
             } catch (error) {
-              allHtmlOutputs.push(`Error: ${(error as Error).message}`)
+              allHtmlOutputs.push(`Error: ${(error as Error).message}`);
               results.push({
                 testCase: i + 1,
                 input: testCase.input,
@@ -753,21 +1027,24 @@ export function useTestPlatform() {
                 actual: null,
                 passed: false,
                 error: (error as Error).message,
-              })
+              });
             }
           }
 
-          setUserHtmlOutputs(allHtmlOutputs)
-          setTestResults(results)
+          setUserHtmlOutputs(allHtmlOutputs);
+          setTestResults(results);
         } else {
-          const userFunction = new Function("console", "return " + code)(customConsole)
-          const results = []
+          const userFunction = new Function("console", "return " + code)(
+            customConsole
+          );
+          const results = [];
 
           for (let i = 0; i < problemSolution.testCases.length; i++) {
-            const testCase = problemSolution.testCases[i]
+            const testCase = problemSolution.testCases[i];
             try {
-              const result = userFunction(testCase.input[0], testCase.input[1])
-              const passed = JSON.stringify(result) === JSON.stringify(testCase.expected)
+              const result = userFunction(testCase.input[0], testCase.input[1]);
+              const passed =
+                JSON.stringify(result) === JSON.stringify(testCase.expected);
 
               results.push({
                 testCase: i + 1,
@@ -776,7 +1053,7 @@ export function useTestPlatform() {
                 actual: result,
                 passed: passed,
                 error: null,
-              })
+              });
             } catch (error) {
               results.push({
                 testCase: i + 1,
@@ -785,11 +1062,11 @@ export function useTestPlatform() {
                 actual: null,
                 passed: false,
                 error: (error as Error).message,
-              })
+              });
             }
           }
 
-          setTestResults(results)
+          setTestResults(results);
         }
       } else if (selectedEditorLanguage === "python") {
         setTestResults([
@@ -799,10 +1076,13 @@ export function useTestPlatform() {
             expected: null,
             actual: null,
             passed: false,
-            error: "Live Python execution is not supported in this browser environment.",
+            error:
+              "Live Python execution is not supported in this browser environment.",
           },
-        ])
-        customConsole.log("Python code is displayed, but live execution is not supported.")
+        ]);
+        customConsole.log(
+          "Python code is displayed, but live execution is not supported."
+        );
       }
     } catch (error) {
       setTestResults([
@@ -814,18 +1094,18 @@ export function useTestPlatform() {
           passed: false,
           error: "Code compilation failed: " + (error as Error).message,
         },
-      ])
-      setUserHtmlOutputs([`Error compiling code: ${(error as Error).message}`])
-      customConsole.error(`Compilation error: ${(error as Error).message}`)
+      ]);
+      setUserHtmlOutputs([`Error compiling code: ${(error as Error).message}`]);
+      customConsole.error(`Compilation error: ${(error as Error).message}`);
     } finally {
-      setConsoleOutput(capturedLogs)
+      setConsoleOutput(capturedLogs);
     }
 
-    setIsRunningTests(false)
-    setShowResults(true)
-    markProblemAsCompleted(currentProblem.id)
-    localStorage.removeItem("inProgressTest")
-  }, [code, currentProblem, selectedEditorLanguage, markProblemAsCompleted])
+    setIsRunningTests(false);
+    setShowResults(true);
+    markProblemAsCompleted(currentProblem.id);
+    localStorage.removeItem("inProgressTest");
+  }, [code, currentProblem, selectedEditorLanguage, markProblemAsCompleted]);
 
   return {
     currentScreen,
@@ -885,5 +1165,6 @@ export function useTestPlatform() {
     handleFinishTest,
     confirmFinishTest,
     cancelFinishTest,
-  }
+    formatCode, // Add formatCode to the returned object
+  };
 }
