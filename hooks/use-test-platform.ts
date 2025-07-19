@@ -6,8 +6,10 @@ import {
   extractComponentName,
   formatTime,
 } from "@/lib/utils";
+import { useAlertStore } from "@/store/alertStore";
 import * as Babel from "@babel/standalone";
 import * as faceapi from "face-api.js";
+import { AlertTriangle } from "lucide-react";
 import type React from "react";
 import type { ClipboardEvent } from "react";
 // @ts-ignore - Prettier plugins need to be imported this way
@@ -69,6 +71,8 @@ export function useTestPlatform() {
   const hiddenStartTimeRef = useRef<number | null>(null);
   const eyeAwayTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const { showAlert } = useAlertStore();
+
   const currentProblem = selectedProblemId
     ? problemsData[selectedProblemId]
     : null;
@@ -85,7 +89,12 @@ export function useTestPlatform() {
       }
     } catch (err) {
       console.error("Error accessing webcam:", err);
-      alert("Could not access webcam. Please ensure permission is granted.");
+      showAlert({
+        title: "Peringatan",
+        description: "Pastikan Anda memberikan izin untuk mengakses webcam.",
+        icon: AlertTriangle,
+        variant: "warning",
+      });
     }
   }, []);
 
@@ -312,9 +321,13 @@ export function useTestPlatform() {
       }
 
       if (currentExitCount >= MAX_EXITS) {
-        alert(
-          `Anda telah keluar dari soal ini ${MAX_EXITS} kali. Tes dianggap gagal.`
-        );
+        showAlert({
+          title: "Gagal!",
+          description: `Anda telah melanggar peraturan karna membuka tab lain selama test berlangsung. Tes dianggap gagal.`,
+          icon: AlertTriangle,
+          variant: "error",
+        });
+
         markProblemAsCompleted(currentProblem.id);
         localStorage.removeItem("inProgressTest");
         setInProgressTest(null);
@@ -412,7 +425,12 @@ export function useTestPlatform() {
       }
 
       if (violationCount >= 3) {
-        alert("Test terminated due to multiple violations.");
+        showAlert({
+          title: "Gagal!",
+          description: `Anda telah melanggar peraturan karna membuka tab lain selama test berlangsung. Tes dianggap gagal.`,
+          icon: AlertTriangle,
+          variant: "error",
+        });
         if (currentProblem) {
           markProblemAsCompleted(currentProblem.id);
         }
@@ -518,7 +536,6 @@ export function useTestPlatform() {
       setPasteWarningCount((prev) => prev + 1);
       setShowPasteWarningModal(true);
       if (pasteWarningCount >= 3) {
-        alert("Test terminated due to multiple violations.");
         if (currentProblem) {
           failTestDueToInactivity();
           markProblemAsCompleted(currentProblem.id);

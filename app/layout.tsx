@@ -1,3 +1,4 @@
+import GlobalAlert from "@/components/global-alert";
 import { ThemeProvider } from "@/components/theme-provider";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
@@ -26,6 +27,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <GlobalAlert />
         </ThemeProvider>
       </body>
     </html>

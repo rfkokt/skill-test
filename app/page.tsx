@@ -32,7 +32,9 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { useAlertStore } from "@/store/alertStore";
 import {
+  AlertTriangle,
   ArrowLeft,
   Camera,
   Code,
@@ -45,6 +47,7 @@ import { useTheme } from "next-themes";
 
 export default function CodingTestPlatform() {
   const { setTheme, theme } = useTheme();
+  const { showAlert } = useAlertStore();
 
   const {
     currentScreen,
@@ -106,7 +109,6 @@ export default function CodingTestPlatform() {
   } = useTestPlatform();
 
   const isMobile = useIsMobile();
-  console.log("debug eyeAwayCount", eyeAwayCount);
 
   if (isMobile) {
     return <MobileWarningModal />;
@@ -155,9 +157,13 @@ export default function CodingTestPlatform() {
                   setWebcamStream(stream);
                 } catch (err) {
                   console.error("Error accessing webcam:", err);
-                  alert(
-                    "Could not access webcam. Please ensure you have a webcam and have granted permission."
-                  );
+                  showAlert({
+                    title: "Peringatan",
+                    description:
+                      "Pastikan Anda memberikan izin untuk mengakses webcam.",
+                    icon: AlertTriangle,
+                    variant: "warning",
+                  });
                 }
               };
               startWebcam();
