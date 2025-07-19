@@ -27,9 +27,8 @@ const processHtmlForPreview = (htmlString: string | null) => {
 
   // Replace className with class for valid HTML
   let processedHtml = htmlString
-    .replace(/className="/g, 'class="')
     .replace(
-      /className="ist"/g,
+      /className="list"/g,
       'class="list" style="padding: 20px; background: #F0F0F0; border-radius: 8px; border: 1px solid #E0E0E0;"' // Simplified styling
     )
     .replace(
@@ -191,14 +190,18 @@ const processHtmlForPreview = (htmlString: string | null) => {
   // Apply inline styles based on classes found
   for (const [cls, style] of Object.entries(styleMap)) {
     const regex = new RegExp(`class="([^"]*\\s)?${cls}(\\s[^"]*)?"`, "g");
+    processedHtml = processedHtml.replace(/className="/g, 'class="');
     processedHtml = processedHtml.replace(regex, (match, p1, p2) => {
-      const existingStyle = match.match(/style="([^"]*)"/);
-      const newStyle = existingStyle ? `${existingStyle[1]} ${style}` : style;
+      const hasStyle = /style="/.test(match);
+      const newStyleAttr = hasStyle
+        ? match.replace(/style="([^"]*)"/, (m, s) => `style="${s} ${style}"`)
+        : `${match} style="${style}"`;
+
       return match
         .replace(/style="[^"]*"/, "")
         .replace(
           `class="${p1 || ""}${cls}${p2 || ""}"`,
-          `class="${p1 || ""}${cls}${p2 || ""}" style="${newStyle}"`
+          `class="${p1 || ""}${cls}${p2 || ""}" style="${newStyleAttr}"`
         );
     });
   }
