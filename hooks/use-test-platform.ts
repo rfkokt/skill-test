@@ -4,6 +4,7 @@ import { problemsData } from "@/lib/problems";
 import {
   convertTimeToSeconds,
   extractComponentName,
+  formatHtmlManually,
   formatTime,
 } from "@/lib/utils";
 import { useAlertStore } from "@/store/alertStore";
@@ -1132,8 +1133,9 @@ export function useTestPlatform() {
                 allHtmlOutputs.push(result);
                 customConsole.error(result);
               }
-
-              const passed = result === testCase.expected;
+              const passed =
+                formatHtmlManually(result) ===
+                formatHtmlManually(testCase.expected);
 
               results.push({
                 testCase: i + 1,

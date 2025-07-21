@@ -284,7 +284,7 @@ export default function CodingTestPlatform() {
 
         {/* Top Bar with Timer */}
         <div className="border-b-2 border-neobrutal-border bg-neobrutal-card px-6 py-3 shadow-[0px_2px_0px_0px_#333333]">
-          <div className="flex items-center justify-between max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mx-auto">
             <div className="flex items-center space-x-4">
               <div className="text-2xl font-mono font-bold text-neobrutal-text">
                 {formatTime(timeLeft)}
@@ -311,7 +311,7 @@ export default function CodingTestPlatform() {
         </div>
 
         {/* Main Content */}
-        <div className="max-w-7xl mx-auto p-6 flex flex-col gap-6">
+        <div className=" mx-auto p-6 flex flex-col gap-6">
           {/* Problem Description */}
           <div className="bg-neobrutal-card rounded-lg p-6 border-2 border-neobrutal-border shadow-[4px_4px_0px_0px_#333333]">
             {/* Problem Header */}

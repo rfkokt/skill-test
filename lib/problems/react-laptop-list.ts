@@ -84,41 +84,7 @@ Gunakan JSX.
               },
             ],
           ],
-          expected: `<div className="list">
-  <div className="card">
-    <h3>
-      Asus TUF
-    </h3>
-    <p>
-      Laptop
-    </p>
-    <p>
-      17 inch
-    </p>
-  </div>
-  <div className="card">
-    <h3>
-      Axioo
-    </h3>
-    <p>
-      Laptop
-    </p>
-    <p>
-      13 inch
-    </p>
-  </div>
-  <div className="card">
-    <h3>
-      Zyrex
-    </h3>
-    <p>
-      Laptop
-    </p>
-    <p>
-      12 inch
-    </p>
-  </div>
-</div>`, // Perubahan di sini: hanya laptop 17 inch yang diharapkan
+          expected: `<div className="list"><div className="card"><h3>Asus TUF</h3><p>Laptop</p><p>17 inch</p></div><div className="card"><h3>Axioo</h3><p>Laptop</p><p>13 inch</p></div><div className="card"><h3>Zyrex</h3><p>Laptop</p><p>12 inch</p></div></div>`,
         },
         {
           input: [[]],
