@@ -94,7 +94,6 @@ export default function CodingTestPlatform() {
     handleKeyDown,
     hasErrors,
     formatTime,
-    setWebcamStream,
     setSelectedEditorLanguage,
     confirmTimeUp,
     confirmInactivity,
@@ -149,23 +148,6 @@ export default function CodingTestPlatform() {
             setCode(problemToResume.solutions[defaultLang].initialCodeTemplate);
             setSelectedEditorLanguage(defaultLang);
             if (problemToResume.requiresWebcam) {
-              const startWebcam = async () => {
-                try {
-                  const stream = await navigator.mediaDevices.getUserMedia({
-                    video: true,
-                  });
-                  setWebcamStream(stream);
-                } catch (err) {
-                  console.error("Error accessing webcam:", err);
-                  showAlert({
-                    title: "Peringatan",
-                    description:
-                      "Pastikan Anda memberikan izin untuk mengakses webcam.",
-                    icon: AlertTriangle,
-                    variant: "warning",
-                  });
-                }
-              };
               startWebcam();
             }
           }}
