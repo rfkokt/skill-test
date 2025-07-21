@@ -8,6 +8,7 @@ import {
 } from "@/lib/utils";
 import { useAlertStore } from "@/store/alertStore";
 import * as Babel from "@babel/standalone";
+import * as faceapi from "face-api.js";
 import { AlertTriangle } from "lucide-react";
 import type React from "react";
 import type { ClipboardEvent } from "react";
@@ -17,9 +18,6 @@ import * as babelPlugin from "prettier/plugins/babel?external";
 import * as estreePlugin from "prettier/plugins/estree?external";
 import * as prettier from "prettier/standalone";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useTimer } from './refactored/useTimer';
-import { useWebcam } from './refactored/useWebcam';
-import { useCodeExecution } from './refactored/useCodeExecution';
 
 const MAX_EXITS = 2; // Define max exits allowed
 
@@ -34,6 +32,8 @@ export function useTestPlatform() {
     "selection" | "start" | "test"
   >("selection");
   const [selectedProblemId, setSelectedProblemId] = useState<string>("");
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [code, setCode] = useState("");
   const [showRefreshModal, setShowRefreshModal] = useState(false);
   const [showTabWarning, setShowTabWarning] = useState(false);
@@ -43,7 +43,12 @@ export function useTestPlatform() {
   const [showInactivityModal, setShowInactivityModal] = useState(false);
   const [showFinishTestModal, setShowFinishTestModal] = useState(false);
   const [violationCount, setViolationCount] = useState(0);
+  const [testResults, setTestResults] = useState<any[]>([]);
+  const [isRunningTests, setIsRunningTests] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [userHtmlOutputs, setUserHtmlOutputs] = useState<(string | null)[]>([]); // Changed to array
+  const [consoleOutput, setConsoleOutput] = useState<string[]>([]);
+  const [webcamStream, setWebcamStream] = useState<MediaStream | null>(null);
   const [selectedEditorLanguage, setSelectedEditorLanguage] =
     useState<string>("javascript");
   const [completedProblems, setCompletedProblems] = useState<string[]>([]);
@@ -52,11 +57,19 @@ export function useTestPlatform() {
   );
   const [pasteWarningCount, setPasteWarningCount] = useState(0); // State for paste warnings
   const [showPasteWarningModal, setShowPasteWarningModal] = useState(false); // State to control modal visibility
-
+  const [expression, setExpression] = useState<string | null>(null);
+  const [isLookingAtScreen, setIsLookingAtScreen] = useState<boolean | null>(
+    null
+  );
+  const [eyeAwayCount, setEyeAwayCount] = useState(0);
+  const [faceDetected, setFaceDetected] = useState<boolean>(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const detectionInterval = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hiddenTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hiddenStartTimeRef = useRef<number | null>(null);
+  const eyeAwayTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const { showAlert } = useAlertStore();
 
@@ -64,41 +77,132 @@ export function useTestPlatform() {
     ? problemsData[selectedProblemId]
     : null;
 
-  const handleTimeUp = useCallback(() => {
-    setShowTimeUpModal(true);
+  // Webcam control functions
+  const startWebcam = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setWebcamStream(stream);
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+    } catch (err) {
+      console.error("Error accessing webcam:", err);
+      showAlert({
+        title: "Peringatan",
+        description: "Pastikan Anda memberikan izin untuk mengakses webcam.",
+        icon: AlertTriangle,
+        variant: "warning",
+      });
+    }
   }, []);
 
-  const {
-    timeLeft,
-    isTimerRunning,
-    startTimer,
-    stopTimer,
-    resetTimer,
-    setTimeLeft,
-    setIsTimerRunning,
-  } = useTimer(0, handleTimeUp);
+  const startDetection = async () => {
+    await faceapi.nets.tinyFaceDetector.loadFromUri("/models");
+    await faceapi.nets.faceLandmark68Net.loadFromUri("/models");
+    await faceapi.nets.faceExpressionNet.loadFromUri("/models");
 
-  const {
-    webcamStream,
-    eyeAwayCount,
-    startWebcam,
-    stopWebcam,
-    setEyeAwayCount,
-  } = useWebcam(videoRef);
+    const video = videoRef.current;
+    if (!video) return;
 
-  const {
-    testResults,
-    isRunningTests,
-    consoleOutput,
-    userHtmlOutputs,
-    runTests,
-  } = useCodeExecution(selectedProblemId, selectedEditorLanguage, code);
+    detectionInterval.current = setInterval(async () => {
+      if (video.readyState !== 4) return;
+
+      const results = await faceapi
+        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+        .withFaceLandmarks()
+        .withFaceExpressions();
+
+      const count = results.length;
+      setFaceDetected(count > 0);
+
+      if (count === 0) {
+        setExpression(null);
+        setIsLookingAtScreen(null);
+        return;
+      }
+
+      if (count === 1 && results[0]) {
+        const exp = results[0].expressions;
+        const maxExp = (
+          Object.keys(exp) as (keyof faceapi.FaceExpressions)[]
+        ).reduce((a, b) => (exp[a] > exp[b] ? a : b));
+        setExpression(maxExp);
+
+        const leftEye = results[0].landmarks.getLeftEye();
+        const rightEye = results[0].landmarks.getRightEye();
+
+        const getAspectRatio = (eye: faceapi.Point[]) => {
+          const width = Math.hypot(eye[3].x - eye[0].x, eye[3].y - eye[0].y);
+          const height = Math.hypot(eye[1].x - eye[5].x, eye[1].y - eye[5].y);
+          return width / height;
+        };
+
+        if (leftEye.length >= 6 && rightEye.length >= 6) {
+          const arLeft = getAspectRatio(leftEye);
+          const arRight = getAspectRatio(rightEye);
+          const avg = (arLeft + arRight) / 2;
+          const isLooking = avg > 3.0;
+
+          setIsLookingAtScreen(isLooking);
+          if (!isLooking) {
+            if (!eyeAwayTimerRef.current) {
+              eyeAwayTimerRef.current = setTimeout(() => {
+                setEyeAwayCount((prev) => {
+                  const next = prev + 1;
+                  return next;
+                });
+                eyeAwayTimerRef.current = null;
+              }, 2000);
+            }
+          }
+        }
+      }
+
+      // Kosongkan canvas
+      if (canvasRef.current) {
+        const ctx = canvasRef.current.getContext("2d");
+        if (!ctx) return;
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      }
+    }, 300);
+  };
 
   useEffect(() => {
-    if (isRunningTests) {
-      setShowResults(true);
+    if (webcamStream && videoRef.current) {
+      console.log("🎯 Video element sudah siap, mulai deteksi wajah");
+      startDetection();
     }
-  }, [isRunningTests]);
+  }, [webcamStream, videoRef.current]);
+
+  useEffect(() => {
+    return () => {
+      if (detectionInterval.current) clearInterval(detectionInterval.current);
+      if (webcamStream) {
+        webcamStream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
+
+  const stopWebcam = useCallback(() => {
+    if (webcamStream) {
+      webcamStream.getTracks().forEach((track) => track.stop());
+      setWebcamStream(null);
+    }
+  }, [webcamStream]);
+
+  // Effect to set webcam stream to video element
+  useEffect(() => {
+    if (videoRef.current && webcamStream) {
+      videoRef.current.srcObject = webcamStream;
+    }
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    };
+  }, [webcamStream]);
 
   // Load completed problems and in-progress test from localStorage on mount
   useEffect(() => {
@@ -136,11 +240,14 @@ export function useTestPlatform() {
   }, []);
 
   const resetTestState = useCallback(() => {
-    stopTimer();
+    setIsTimerRunning(false);
     stopWebcam();
     setCurrentScreen("selection");
     setSelectedProblemId("");
     setViolationCount(0);
+    setTestResults([]);
+    setConsoleOutput([]);
+    setUserHtmlOutputs([]); // Reset to empty array
     setShowTimeUpModal(false);
     setShowInactivityModal(false);
     setShowFinishTestModal(false);
@@ -149,11 +256,16 @@ export function useTestPlatform() {
       hiddenTimerRef.current = null;
     }
     hiddenStartTimeRef.current = null;
-  }, [stopTimer, stopWebcam]);
+  }, [stopWebcam]);
 
   // Function to fail the test due to inactivity - now shows modal instead of alert
   const failTestDueToInactivity = useCallback(() => {
     setShowInactivityModal(true);
+  }, []);
+
+  // Function to handle time up - now shows modal instead of alert
+  const handleTimeUp = useCallback(() => {
+    setShowTimeUpModal(true);
   }, []);
 
   // Function to confirm time up modal
@@ -209,6 +321,13 @@ export function useTestPlatform() {
       }
 
       if (currentExitCount >= MAX_EXITS) {
+        showAlert({
+          title: "Gagal!",
+          description: `Anda telah melanggar peraturan karna membuka tab lain selama test berlangsung. Tes dianggap gagal.`,
+          icon: AlertTriangle,
+          variant: "error",
+        });
+
         markProblemAsCompleted(currentProblem.id);
         localStorage.removeItem("inProgressTest");
         setInProgressTest(null);
@@ -278,6 +397,19 @@ export function useTestPlatform() {
     timeLeft,
     inProgressTest,
   ]);
+
+  // Timer logic - updated to use modal instead of alert
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isTimerRunning && timeLeft > 0) {
+      interval = setInterval(() => {
+        setTimeLeft((time) => time - 1);
+      }, 1000);
+    } else if (isTimerRunning && timeLeft === 0) {
+      handleTimeUp();
+    }
+    return () => clearInterval(interval);
+  }, [isTimerRunning, timeLeft, handleTimeUp]);
 
   // Tab switching detection and refresh prevention
   const handleVisibilityChange = useCallback(() => {
@@ -384,14 +516,14 @@ export function useTestPlatform() {
       setCode(currentProblem.solutions[defaultLang].initialCodeTemplate);
       setSelectedEditorLanguage(defaultLang);
       setCurrentScreen("test");
-      startTimer();
+      setIsTimerRunning(true);
       setViolationCount(0); // Reset violation count when starting a new test
       if (currentProblem.requiresWebcam) {
         startWebcam();
       }
-      resetTimer(convertTimeToSeconds(currentProblem.estimatedTime));
+      setTimeLeft(convertTimeToSeconds(currentProblem.estimatedTime));
     }
-  }, [currentProblem, startWebcam, startTimer, resetTimer]);
+  }, [currentProblem, startWebcam]);
 
   const handleCancelStartTest = useCallback(() => {
     setCurrentScreen("selection");
@@ -424,6 +556,147 @@ export function useTestPlatform() {
   const handleClosePasteWarningModal = () => {
     setShowPasteWarningModal(false);
   };
+
+  const updateLivePreviewAndConsole = useCallback(() => {
+    setConsoleOutput([]);
+    if (!currentProblem) {
+      setUserHtmlOutputs([]);
+      return;
+    }
+
+    const capturedLogs: string[] = [];
+    const customConsole = {
+      log: (...args: any[]) => {
+        capturedLogs.push(
+          args
+            .map((arg) => {
+              if (typeof arg === "object" && arg !== null) {
+                try {
+                  return JSON.stringify(arg, null, 2);
+                } catch (e) {
+                  return String(arg);
+                }
+              }
+              return String(arg);
+            })
+            .join(" ")
+        );
+      },
+      warn: (...args: any[]) =>
+        capturedLogs.push("WARN: " + args.map(String).join(" ")),
+      error: (...args: any[]) =>
+        capturedLogs.push("ERROR: " + args.map(String).join(" ")),
+    };
+
+    const problemSolution = currentProblem.solutions[selectedEditorLanguage];
+    if (!problemSolution) {
+      setUserHtmlOutputs([]);
+      setConsoleOutput(["Live execution for this language is not supported."]);
+      return;
+    }
+
+    try {
+      if (selectedEditorLanguage === "javascript") {
+        if (currentProblem.id.startsWith("react-")) {
+          const React = {
+            createElement: (type: string, props: any, ...children: any[]) => {
+              const flatChildren = children
+                .flat()
+                .filter((child) => child !== null && child !== undefined);
+              let propsStr = "";
+              if (props) {
+                propsStr = Object.entries(props)
+                  .map(([key, value]) => {
+                    if (key === "className") return `className="${value}"`;
+                    if (key === "src") return `src="${value}"`;
+                    if (key === "alt") return `alt="${value}"`;
+                    return "";
+                  })
+                  .filter(Boolean)
+                  .join(" ");
+              }
+
+              if (type === "img") {
+                return `<${type} ${propsStr} />`;
+              }
+              return `<${type}${propsStr ? " " + propsStr : ""}>${flatChildren.join("")}</${type}>`;
+            },
+          };
+
+          const userFunction = new Function(
+            "React",
+            "console",
+            "return " + code
+          )(React, customConsole);
+
+          // Generate preview outputs for all test cases
+          const previewOutputs: (string | null)[] = [];
+          if (problemSolution.testCases.length > 0) {
+            for (let i = 0; i < problemSolution.testCases.length; i++) {
+              try {
+                const propName = currentProblem.reactPropName;
+                if (propName) {
+                  const props = {
+                    [propName]: problemSolution.testCases[i].input[0],
+                  };
+                  previewOutputs.push(userFunction(props));
+                } else {
+                  const errorMsg = `Error: 'reactPropName' is not defined for this React problem.`;
+                  previewOutputs.push(errorMsg);
+                  customConsole.error(errorMsg);
+                }
+              } catch (err) {
+                const errorMsg = `Error in preview for test case ${i + 1}: ${(err as Error).message}`;
+                previewOutputs.push(errorMsg);
+                customConsole.error(
+                  `Error rendering preview for test case ${i + 1}: ${(err as Error).message}`
+                );
+              }
+            }
+          }
+          setUserHtmlOutputs(previewOutputs);
+        } else {
+          const userFunction = new Function("console", "return " + code)(
+            customConsole
+          );
+          setUserHtmlOutputs([]);
+          try {
+            userFunction(
+              problemSolution.testCases[0]?.input[0],
+              problemSolution.testCases[0]?.input[1]
+            );
+          } catch (err) {
+            customConsole.error(
+              `Error executing code for preview: ${(err as Error).message}`
+            );
+          }
+        }
+      } else if (selectedEditorLanguage === "python") {
+        customConsole.log(
+          "Python code preview is static. Live execution is not supported."
+        );
+        setUserHtmlOutputs([]);
+      }
+    } catch (error) {
+      const errorMsg = `Compilation error for preview: ${(error as Error).message}`;
+      setUserHtmlOutputs([errorMsg]);
+      customConsole.error(errorMsg);
+    } finally {
+      setConsoleOutput(capturedLogs);
+    }
+  }, [code, currentProblem, selectedEditorLanguage]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      updateLivePreviewAndConsole();
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [
+    code,
+    currentProblem,
+    selectedEditorLanguage,
+    updateLivePreviewAndConsole,
+  ]);
 
   const hasErrors = useCallback(() => {
     const currentTemplate =
@@ -623,6 +896,342 @@ export function useTestPlatform() {
     }
   }, [code, selectedEditorLanguage, setCode]);
 
+  // Basic JavaScript formatting fallback
+  const simpleFormatJavaScript = (code: string): string => {
+    try {
+      const stringLiterals: string[] = [];
+      const comments: string[] = [];
+
+      // Simpan string literals
+      code = code.replace(/(["'`])((?:\\.|(?!\1).)*?)\1/g, (match) => {
+        stringLiterals.push(match);
+        return `__STR_${stringLiterals.length - 1}__`;
+      });
+
+      // Simpan single-line comments
+      code = code.replace(/\/\/.*/g, (match) => {
+        comments.push(match);
+        return `__COMMENT_${comments.length - 1}__`;
+      });
+
+      // Tambahkan spasi di sekitar operator dasar (hindari '/')
+      code = code.replace(/([=+\-*%<>!&|^]=?)/g, " $1 ");
+
+      // Titik koma ke newline
+      code = code.replace(/;\s*/g, ";\n");
+
+      // Format block: tambahkan newline setelah `{`, sebelum `}`
+      code = code.replace(/(\))\s*{/g, "$1 {\n").replace(/}\s*/g, "\n}");
+
+      // Hindari pecah destructuring parameter
+      code = code.replace(
+        /function\s+(\w+)\s*\(\s*{\s*([^}]*)\s*}\s*\)/g,
+        (_, fn, params) => {
+          return `function ${fn}({ ${params.trim()} })`;
+        }
+      );
+
+      // Cleanup newline ganda
+      code = code.replace(/\n{2,}/g, "\n");
+
+      // Indentasi per baris
+      const lines = code.split("\n");
+      let indentLevel = 0;
+      const result = lines.map((line) => {
+        const trimmed = line.trim();
+        if (!trimmed) return "";
+
+        if (trimmed.startsWith("}")) indentLevel = Math.max(0, indentLevel - 1);
+        const indented = "  ".repeat(indentLevel) + trimmed;
+        if (trimmed.endsWith("{")) indentLevel += 1;
+
+        return indented;
+      });
+
+      // Kembalikan komentar & string
+      let final = result.join("\n");
+      stringLiterals.forEach((s, i) => {
+        final = final.replace(`__STR_${i}__`, s);
+      });
+      comments.forEach((c, i) => {
+        final = final.replace(`__COMMENT_${i}__`, c);
+      });
+
+      return final.trim();
+    } catch (err) {
+      console.error("Format failed:", err);
+      return code;
+    }
+  };
+
+  const runTests = useCallback(async () => {
+    if (!currentProblem) return;
+
+    setIsRunningTests(true);
+    setShowResults(false);
+    setUserHtmlOutputs([]);
+    setConsoleOutput([]);
+
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    const capturedLogs: string[] = [];
+    const customConsole = {
+      log: (...args: any[]) => {
+        capturedLogs.push(
+          args
+            .map((arg) => {
+              if (typeof arg === "object" && arg !== null) {
+                try {
+                  return JSON.stringify(arg, null, 2);
+                } catch (e) {
+                  return String(arg);
+                }
+              }
+              return String(arg);
+            })
+            .join(" ")
+        );
+      },
+      warn: (...args: any[]) =>
+        capturedLogs.push("WARN: " + args.map(String).join(" ")),
+      error: (...args: any[]) =>
+        capturedLogs.push("ERROR: " + args.map(String).join(" ")),
+    };
+
+    const problemSolution = currentProblem.solutions[selectedEditorLanguage];
+    if (!problemSolution) {
+      setTestResults([
+        {
+          testCase: "Language Not Supported",
+          input: null,
+          expected: null,
+          actual: null,
+          passed: false,
+          error: `Execution for ${selectedEditorLanguage} is not supported in this environment.`,
+        },
+      ]);
+      setIsRunningTests(false);
+      setShowResults(true);
+      markProblemAsCompleted(currentProblem.id);
+      localStorage.removeItem("inProgressTest");
+      return;
+    }
+
+    try {
+      if (selectedEditorLanguage === "javascript") {
+        if (currentProblem.id.startsWith("react-")) {
+          const results = [];
+          const allHtmlOutputs: (string | null)[] = [];
+
+          const React = {
+            createElement: (type: string, props: any, ...children: any[]) => {
+              const flatChildren = children
+                .flat()
+                .filter((child) => child !== null && child !== undefined);
+              let propsStr = "";
+              if (props) {
+                propsStr = Object.entries(props)
+                  .map(([key, value]) => {
+                    if (key === "className") return `className="${value}"`;
+                    if (key === "src") return `src="${value}"`;
+                    if (key === "alt") return `alt="${value}"`;
+                    return "";
+                  })
+                  .filter(Boolean)
+                  .join(" ");
+              }
+
+              if (type === "img") {
+                return `<${type} ${propsStr} />`;
+              }
+              return `<${type}${propsStr ? " " + propsStr : ""}>${flatChildren.join("")}</${type}>`;
+            },
+          };
+
+          let transpiledCode = "";
+          try {
+            transpiledCode =
+              Babel.transform(code, {
+                presets: ["react"], // support JSX
+              }).code || "";
+          } catch (e) {
+            setTestResults([
+              {
+                testCase: "Compilation Error",
+                input: null,
+                expected: null,
+                actual: null,
+                passed: false,
+                error: "Babel compile failed: " + (e as Error).message,
+              },
+            ]);
+            setUserHtmlOutputs([
+              `Error compiling code: ${(e as Error).message}`,
+            ]);
+            setConsoleOutput(capturedLogs);
+            setIsRunningTests(false);
+            setShowResults(true);
+            return;
+          }
+
+          let userFunction: any;
+
+          try {
+            const componentName = extractComponentName(code);
+            if (!componentName) {
+              setTestResults([
+                {
+                  testCase: "Error",
+                  input: null,
+                  expected: null,
+                  actual: null,
+                  passed: false,
+                  error:
+                    "Cannot detect component name. Make sure to name your function with PascalCase (e.g. UserList).",
+                },
+              ]);
+              return;
+            }
+            userFunction = new Function(
+              "React",
+              "console",
+              `${transpiledCode}; return ${componentName};`
+            )(React, customConsole);
+          } catch (err) {
+            setTestResults([
+              {
+                testCase: "Runtime Error",
+                input: null,
+                expected: null,
+                actual: null,
+                passed: false,
+                error: "Execution failed: " + (err as Error).message,
+              },
+            ]);
+            setUserHtmlOutputs([
+              `Error running code: ${(err as Error).message}`,
+            ]);
+            setConsoleOutput(capturedLogs);
+            setIsRunningTests(false);
+            setShowResults(true);
+            return;
+          }
+
+          // Generate HTML outputs for all test cases
+          for (let i = 0; i < problemSolution.testCases.length; i++) {
+            const testCase = problemSolution.testCases[i];
+            try {
+              let result: any;
+              const propName = currentProblem.reactPropName;
+              if (propName) {
+                const props = { [propName]: testCase.input[0] };
+                result = userFunction(props);
+                allHtmlOutputs.push(result);
+              } else {
+                result = `Error: 'reactPropName' is not defined for this React problem.`;
+                allHtmlOutputs.push(result);
+                customConsole.error(result);
+              }
+
+              const passed = result === testCase.expected;
+
+              results.push({
+                testCase: i + 1,
+                input: testCase.input,
+                expected: testCase.expected,
+                actual: result,
+                passed: passed,
+                error: null,
+              });
+            } catch (error) {
+              allHtmlOutputs.push(`Error: ${(error as Error).message}`);
+              results.push({
+                testCase: i + 1,
+                input: testCase.input,
+                expected: testCase.expected,
+                actual: null,
+                passed: false,
+                error: (error as Error).message,
+              });
+            }
+          }
+
+          setUserHtmlOutputs(allHtmlOutputs);
+          setTestResults(results);
+        } else {
+          const userFunction = new Function("console", "return " + code)(
+            customConsole
+          );
+          const results = [];
+
+          for (let i = 0; i < problemSolution.testCases.length; i++) {
+            const testCase = problemSolution.testCases[i];
+            try {
+              const result = userFunction(testCase.input[0], testCase.input[1]);
+              const passed =
+                JSON.stringify(result) === JSON.stringify(testCase.expected);
+
+              results.push({
+                testCase: i + 1,
+                input: testCase.input,
+                expected: testCase.expected,
+                actual: result,
+                passed: passed,
+                error: null,
+              });
+            } catch (error) {
+              results.push({
+                testCase: i + 1,
+                input: testCase.input,
+                expected: testCase.expected,
+                actual: null,
+                passed: false,
+                error: (error as Error).message,
+              });
+            }
+          }
+
+          setTestResults(results);
+        }
+      } else if (selectedEditorLanguage === "python") {
+        setTestResults([
+          {
+            testCase: "Execution",
+            input: null,
+            expected: null,
+            actual: null,
+            passed: false,
+            error:
+              "Live Python execution is not supported in this browser environment.",
+          },
+        ]);
+        customConsole.log(
+          "Python code is displayed, but live execution is not supported."
+        );
+      }
+    } catch (error) {
+      setTestResults([
+        {
+          testCase: "Compilation",
+          input: null,
+          expected: null,
+          actual: null,
+          passed: false,
+          error: "Code compilation failed: " + (error as Error).message,
+        },
+      ]);
+      setUserHtmlOutputs([`Error compiling code: ${(error as Error).message}`]);
+      customConsole.error(`Compilation error: ${(error as Error).message}`);
+    } finally {
+      setConsoleOutput(capturedLogs);
+    }
+
+    setIsRunningTests(false);
+    setShowResults(true);
+    markProblemAsCompleted(currentProblem.id);
+    localStorage.removeItem("inProgressTest");
+  }, [code, currentProblem, selectedEditorLanguage, markProblemAsCompleted]);
+
   return {
     currentScreen,
     selectedProblemId,
@@ -641,7 +1250,7 @@ export function useTestPlatform() {
     testResults,
     isRunningTests,
     showResults,
-    userHtmlOutputs,
+    userHtmlOutputs, // Changed from userHtmlOutput to userHtmlOutputs
     consoleOutput,
     webcamStream,
     selectedEditorLanguage,
@@ -662,8 +1271,13 @@ export function useTestPlatform() {
     setViolationCount,
     setShowPasteWarningModal,
     setPasteWarningCount,
+    setTestResults,
+    setIsRunningTests,
     setShowResults,
-    setWebcamStream: () => {}, // mock function
+    setUserHtmlOutputs, // Changed from setUserHtmlOutput to setUserHtmlOutputs
+    setConsoleOutput,
+    setWebcamStream,
+    setSelectedEditorLanguage,
     setCompletedProblems,
     setInProgressTest,
     handleGoBack,
