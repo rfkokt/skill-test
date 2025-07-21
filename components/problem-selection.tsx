@@ -123,6 +123,7 @@ export default function ProblemSelection({
           items={[
             { value: "All", label: "All" },
             { value: "javascript", label: "JavaScript" },
+            { value: "react", label: "ReactJs" },
             { value: "python", label: "Python" },
           ]}
           selectedValue={selectedLanguageFilter}

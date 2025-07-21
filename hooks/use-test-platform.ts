@@ -321,13 +321,6 @@ export function useTestPlatform() {
       }
 
       if (currentExitCount >= MAX_EXITS) {
-        showAlert({
-          title: "Gagal!",
-          description: `Anda telah melanggar peraturan karna membuka tab lain selama test berlangsung. Tes dianggap gagal.`,
-          icon: AlertTriangle,
-          variant: "error",
-        });
-
         markProblemAsCompleted(currentProblem.id);
         localStorage.removeItem("inProgressTest");
         setInProgressTest(null);

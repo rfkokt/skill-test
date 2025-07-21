@@ -88,6 +88,8 @@ export function formatHtmlManually(html: string): string {
 
   html = removeSurroundingQuotes(html) // hapus quote di awal/akhir
     .replace(/\\"/g, '"') // escape quote jadi normal
+    .replace(/\\n/g, "") // hapus literal \n
+    .replace(/\s{2,}/g, " ") // ganti spasi/tab berlebih
     .replace(/>\s+</g, "><") // hapus whitespace antar tag
     .trim();
 
@@ -106,4 +108,12 @@ export function formatHtmlManually(html: string): string {
   }
 
   return formatted.trim();
+}
+
+export function generateDailyVerificationCodeForScript(): string {
+  const today = new Date();
+  const day = String(today.getDate()).padStart(2, "0");
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const year = String(today.getFullYear()).slice(-2);
+  return `TE${day}ST${month}NS${year}`;
 }

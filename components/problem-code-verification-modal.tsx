@@ -47,7 +47,7 @@ export default function ProblemCodeVerificationModal({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setVerificationCode(e.target.value);
+    setVerificationCode(e.target.value.toUpperCase());
     setError("");
   };
 
