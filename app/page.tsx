@@ -25,6 +25,7 @@ import { useTestPlatform } from "@/hooks/use-test-platform";
 import { problemsData } from "@/lib/problems";
 import { formatHtmlManually } from "@/lib/utils";
 // Add the missing imports for the FileText icon
+import DraggableBox from "@/components/draggable-box";
 import EyeAwayWarningModal from "@/components/eye-warning-modal";
 import {
   Accordion,
@@ -33,6 +34,10 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useAlertStore } from "@/store/alertStore";
+import { javascript } from "@codemirror/lang-javascript";
+import { lintGutter } from "@codemirror/lint";
+import { EditorView } from "@codemirror/view";
+import CodeMirror from "@uiw/react-codemirror";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -44,11 +49,12 @@ import {
   XCircle,
 } from "lucide-react"; // Import Code icon
 import { useTheme } from "next-themes";
+import { useState } from "react";
 
 export default function CodingTestPlatform() {
   const { setTheme, theme } = useTheme();
   const { showAlert } = useAlertStore();
-
+  const [isViewConsole, setIsViewConsole] = useState("0");
   const {
     currentScreen,
     selectedProblemId,
@@ -76,6 +82,9 @@ export default function CodingTestPlatform() {
     videoRef,
     currentProblem,
     eyeAwayCount,
+    customSnippets,
+    evalLinter,
+    resultsRef,
     setCurrentScreen,
     setSelectedProblemId,
     setTimeLeft,
@@ -268,22 +277,24 @@ export default function CodingTestPlatform() {
 
         {/* Floating Webcam Preview */}
         {webcamStream && currentProblem.requiresWebcam && (
-          <div className="fixed top-4 right-4 z-50">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-32 h-24 rounded-lg shadow-[4px_4px_0px_0px_#333333] border-2 border-neobrutal-border object-cover"
-            />
-            <div className="absolute bottom-1 left-1 bg-neobrutal-softBlue text-neobrutal-softBlueText text-xs px-1 py-0.5 rounded-md flex items-center gap-1 border border-neobrutal-border">
-              <Camera className="w-3 h-3" /> Monitoring
+          <DraggableBox initialX={window.innerWidth - 150} initialY={80}>
+            <div className="relative">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-32 h-24 rounded-lg shadow-[4px_4px_0px_0px_#333333] border-2 border-neobrutal-border object-cover -scale-x-100"
+              />
+              <div className="absolute bottom-1 left-1 bg-neobrutal-softBlue text-neobrutal-softBlueText text-xs px-1 py-0.5 rounded-md flex items-center gap-1 border border-neobrutal-border">
+                <Camera className="w-3 h-3" /> Monitoring
+              </div>
             </div>
-          </div>
+          </DraggableBox>
         )}
 
         {/* Top Bar with Timer */}
-        <div className="border-b-2 border-neobrutal-border bg-neobrutal-card px-6 py-3 shadow-[0px_2px_0px_0px_#333333]">
+        <div className="fixed top-0 left-0 right-0 z-40 border-b-2 border-neobrutal-border bg-neobrutal-card px-6 py-3 shadow-[0px_2px_0px_0px_#333333]">
           <div className="flex items-center justify-between mx-auto">
             <div className="flex items-center space-x-4">
               <div className="text-2xl font-mono font-bold text-neobrutal-text">
@@ -311,7 +322,7 @@ export default function CodingTestPlatform() {
         </div>
 
         {/* Main Content */}
-        <div className=" mx-auto p-6 flex flex-col gap-6">
+        <div className="pt-20 mx-auto p-6 flex flex-col gap-6">
           {/* Problem Description */}
           <div className="bg-neobrutal-card rounded-lg p-6 border-2 border-neobrutal-border shadow-[4px_4px_0px_0px_#333333]">
             {/* Problem Header */}
@@ -422,6 +433,29 @@ export default function CodingTestPlatform() {
           {/* Solution Area */}
           <div className="bg-neobrutal-card rounded-lg p-6 border-2 border-neobrutal-border shadow-[4px_4px_0px_0px_#333333]">
             {/* Solution Header */}
+            <div className="space-y-4 mb-6">
+              <div className="flex w-full space-x-2 items-end justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={runTests}
+                  disabled={isRunningTests}
+                >
+                  {isRunningTests ? "Running..." : "Run & Test"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={formatCode}
+                  disabled={selectedEditorLanguage !== "javascript"}
+                  className="flex items-center space-x-2 bg-transparent"
+                >
+                  <Code className="w-4 h-4" />
+                  <span>Format Code</span>
+                </Button>
+              </div>
+            </div>
+
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-neobrutal-text">
                 Solution
@@ -449,6 +483,45 @@ export default function CodingTestPlatform() {
             <Tabs value={selectedEditorLanguage} className="w-full">
               {currentProblem.languages.map((lang) => (
                 <TabsContent key={lang} value={lang} className="space-y-4">
+                  {/* Console Output */}
+                  <Accordion
+                    type="single"
+                    collapsible
+                    value={isViewConsole}
+                    onValueChange={(value) => setIsViewConsole(value)}
+                    className="w-full"
+                  >
+                    <AccordionItem
+                      key={`expected-content-${isViewConsole === "1" ? 1 : 0}`}
+                      value={`expected-${isViewConsole === "1" ? 1 : 0}`}
+                      className="border-b-2 border-neobrutal-border shadow-[2px_2px_0px_0px_#333333] mb-4 rounded-lg overflow-hidden"
+                    >
+                      <AccordionTrigger className="flex items-center justify-between p-4 bg-neobrutal-card text-neobrutal-text hover:bg-neobrutal-bg/90 border-b-2 border-neobrutal-border">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">Console</span>
+                          <Badge className={"bg-rose-500 text-white"}>
+                            {consoleOutput.length}
+                          </Badge>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="p-4 bg-neobrutal-bg">
+                        <div className="border-2 border-neobrutal-border rounded-lg p-4 bg-neobrutal-border text-neobrutal-card shadow-[2px_2px_0px_0px_#333333] mt-4">
+                          <h4 className="font-medium text-neobrutal-card mb-3">
+                            Console Output:
+                          </h4>
+                          <div className="text-sm font-mono space-y-1 max-h-40 overflow-y-auto">
+                            {consoleOutput.map((log, index) => (
+                              <p
+                                key={index}
+                                className="text-neobrutal-card/90"
+                              >{`> ${log}`}</p>
+                            ))}
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+
                   <ResizablePanelGroup
                     direction="horizontal"
                     className="min-h-[400px]"
@@ -462,32 +535,30 @@ export default function CodingTestPlatform() {
                       }
                     >
                       {/* Code Editor */}
-                      <div className="group border-2 border-neobrutal-border rounded-lg bg-neobrutal-bg shadow-[2px_2px_0px_0px_#333333] group-focus-within:shadow-[4px_4px_0px_0px_var(--neobrutal-border)] group-focus-within:border-neobrutal-softBlue transition-all duration-200 h-full">
-                        <div className="flex h-full">
-                          <div className="bg-neobrutal-bg px-3 py-2 text-sm text-neobrutal-text/60 font-mono border-r-2 border-neobrutal-border min-w-[50px] overflow-y-auto">
-                            {code.split("\n").map((_, index) => (
-                              <div
-                                key={index}
-                                className="leading-6 flex items-center"
-                              >
-                                {hasErrors() && index === 0 && (
-                                  <div className="w-2 h-2 bg-neobrutal-softRed rounded-full mr-2"></div>
-                                )}
-                                {index + 1}
-                              </div>
-                            ))}
-                          </div>
-                          <div className="flex-1">
-                            <textarea
-                              ref={textareaRef}
+                      <div className="flex-1 h-full">
+                        <div className="h-full border-2 border-neobrutal-border bg-neobrutal-card rounded-lg shadow-[4px_4px_0px_0px_#333333] overflow-hidden">
+                          <div className="flex flex-col">
+                            <CodeMirror
                               value={code}
-                              onChange={(e) => setCode(e.target.value)}
-                              onKeyDown={handleKeyDown}
-                              // onPaste={(e) => handlePaste(e)}
+                              theme={theme as "light" | "dark"}
+                              height="auto"
+                              className="flex-1 font-mono text-sm"
+                              basicSetup={{
+                                autocompletion: true,
+                                lineNumbers: true,
+                                highlightActiveLine: true,
+                                indentOnInput: true,
+                              }}
+                              extensions={[
+                                javascript(),
+                                EditorView.lineWrapping,
+                                EditorView.editable.of(true),
+                                lintGutter(),
+                                evalLinter,
+                                customSnippets,
+                              ]}
+                              onChange={(value) => setCode(value)}
                               onBlur={formatCode}
-                              className="w-full h-full p-3 font-mono text-sm text-neobrutal-text bg-transparent border-none outline-none resize-none leading-6 overflow-y-auto placeholder:text-neobrutal-text/50 focus:ring-2 focus:ring-neobrutal-softBlue focus:ring-offset-2 focus:ring-offset-neobrutal-bg"
-                              placeholder={`Write your ${lang} solution here...`}
-                              spellCheck={false}
                             />
                           </div>
                         </div>
@@ -499,31 +570,16 @@ export default function CodingTestPlatform() {
                           <ResizableHandle withHandle />
                           <ResizablePanel defaultSize={35}>
                             {/* User's HTML Output Preview (for React problems) */}
-                            <HtmlPreview
-                              expectedHtmlContent={expectedHtmlContents}
-                              userHtmlOutputs={userHtmlOutputs}
-                            />
+                            <div className="h-full">
+                              <HtmlPreview
+                                expectedHtmlContent={expectedHtmlContents}
+                                userHtmlOutputs={userHtmlOutputs}
+                              />
+                            </div>
                           </ResizablePanel>
                         </>
                       )}
                   </ResizablePanelGroup>
-
-                  {/* Console Output */}
-                  {consoleOutput.length > 0 && (
-                    <div className="border-2 border-neobrutal-border rounded-lg p-4 bg-neobrutal-border text-neobrutal-card shadow-[2px_2px_0px_0px_#333333] mt-4">
-                      <h4 className="font-medium text-neobrutal-card mb-3">
-                        Console Output:
-                      </h4>
-                      <div className="text-sm font-mono space-y-1 max-h-40 overflow-y-auto">
-                        {consoleOutput.map((log, index) => (
-                          <p
-                            key={index}
-                            className="text-neobrutal-card/90"
-                          >{`> ${log}`}</p>
-                        ))}
-                      </div>
-                    </div>
-                  )}
 
                   {/* Error Message */}
                   {hasErrors() && (
@@ -555,27 +611,6 @@ export default function CodingTestPlatform() {
 
             {/* Action Buttons */}
             <div className="space-y-4 mt-6">
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={runTests}
-                  disabled={isRunningTests}
-                >
-                  {isRunningTests ? "Running..." : "Run & Test"}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={formatCode}
-                  disabled={selectedEditorLanguage !== "javascript"}
-                  className="flex items-center space-x-2 bg-transparent"
-                >
-                  <Code className="w-4 h-4" />
-                  <span>Format Code</span>
-                </Button>
-              </div>
-
               <div className="text-center">
                 <p className="text-sm text-neobrutal-text/80 mb-4">
                   This will validate your code and run it against{" "}
@@ -583,13 +618,6 @@ export default function CodingTestPlatform() {
                     .length || 0}{" "}
                   test cases
                 </p>
-                <Button
-                  className="w-full bg-neobrutal-border hover:bg-neobrutal-border/90 text-neobrutal-card font-semibold py-3 shadow-[4px_4px_0px_0px_#333333] active:shadow-[2px_2px_0px_0px_#333333] active:translate-x-[2px] active:translate-y-[2px]"
-                  onClick={runTests}
-                  disabled={isRunningTests}
-                >
-                  {isRunningTests ? "⏳ Running Code..." : "▶ Run Code"}
-                </Button>
                 {/* Selesai button moved here */}
                 <Button
                   onClick={handleFinishTest}
@@ -605,7 +633,10 @@ export default function CodingTestPlatform() {
 
           {/* Test Results Section - NEW */}
           {showResults && (
-            <div className="bg-neobrutal-card rounded-lg p-6 border-2 border-neobrutal-border shadow-[4px_4px_0px_0px_#333333] mt-6">
+            <div
+              ref={resultsRef}
+              className="bg-neobrutal-card rounded-lg p-6 border-2 border-neobrutal-border shadow-[4px_4px_0px_0px_#333333] mt-6"
+            >
               <h2 className="text-lg font-semibold text-neobrutal-text mb-4">
                 Test Results
               </h2>

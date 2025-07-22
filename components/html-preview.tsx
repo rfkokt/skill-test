@@ -227,7 +227,7 @@ export default function HtmlPreview({
   );
 
   return (
-    <Card className="border-2 border-neobrutal-border shadow-[4px_4px_0px_0px_#333333] bg-neobrutal-card">
+    <Card className="h-full border-2 border-neobrutal-border shadow-[4px_4px_0px_0px_#333333] bg-neobrutal-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Eye className="h-5 w-5" />

@@ -9,6 +9,8 @@ import {
 } from "@/lib/utils";
 import { useAlertStore } from "@/store/alertStore";
 import * as Babel from "@babel/standalone";
+import { autocompletion, completeFromList } from "@codemirror/autocomplete";
+import { Diagnostic, linter } from "@codemirror/lint";
 import * as faceapi from "face-api.js";
 import { AlertTriangle } from "lucide-react";
 import type React from "react";
@@ -71,6 +73,7 @@ export function useTestPlatform() {
   const hiddenTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hiddenStartTimeRef = useRef<number | null>(null);
   const eyeAwayTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   const { showAlert } = useAlertStore();
 
@@ -230,6 +233,11 @@ export function useTestPlatform() {
       }
     }
   }, []);
+  useEffect(() => {
+    if (showResults && resultsRef.current) {
+      resultsRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [showResults]);
 
   // Function to mark a problem as completed (failed or passed)
   const markProblemAsCompleted = useCallback((problemId: string) => {
@@ -717,18 +725,18 @@ export function useTestPlatform() {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
       if (e.key === "Tab") {
         e.preventDefault();
-        const textarea = textareaRef.current;
-        if (!textarea) return;
 
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
         const value = textarea.value;
-        const indentation = "  "; // 2 spaces for indentation
+        const indentation = "  ";
 
         if (start === end) {
-          // Single cursor: insert indentation
           const newValue =
             value.substring(0, start) + indentation + value.substring(end);
           setCode(newValue);
@@ -737,7 +745,6 @@ export function useTestPlatform() {
               start + indentation.length;
           }, 0);
         } else {
-          // Multi-line selection: indent/de-indent selected lines
           const lines = value.split("\n");
           const startLineIndex =
             value.substring(0, start).split("\n").length - 1;
@@ -748,7 +755,6 @@ export function useTestPlatform() {
           let newSelectionEnd = end;
 
           if (e.shiftKey) {
-            // De-indent
             for (let i = startLineIndex; i <= endLineIndex; i++) {
               if (newCodeLines[i].startsWith(indentation)) {
                 newCodeLines[i] = newCodeLines[i].substring(indentation.length);
@@ -771,13 +777,13 @@ export function useTestPlatform() {
               }
             }
           } else {
-            // Indent
             for (let i = startLineIndex; i <= endLineIndex; i++) {
               newCodeLines[i] = indentation + newCodeLines[i];
               if (i === startLineIndex) newSelectionStart += indentation.length;
               if (i === endLineIndex) newSelectionEnd += indentation.length;
             }
           }
+
           setCode(newCodeLines.join("\n"));
           setTimeout(() => {
             textarea.selectionStart = newSelectionStart;
@@ -786,9 +792,6 @@ export function useTestPlatform() {
         }
       } else if ((e.metaKey || e.ctrlKey) && e.key === "/") {
         e.preventDefault();
-
-        const textarea = textareaRef.current;
-        if (!textarea) return;
 
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
@@ -866,10 +869,99 @@ export function useTestPlatform() {
       } else if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
         runTests();
+      } else if (e.key === "Enter") {
+        setTimeout(() => {
+          const pos = textarea.selectionStart;
+          const before = code.slice(0, pos);
+          const lines = before.split("\n");
+          const currentLine = lines.at(-2)?.trim() || "";
+
+          // 🧠 SNIPPET: Expand "for"
+          if (
+            selectedEditorLanguage === "javascript" &&
+            currentLine === "for"
+          ) {
+            const snippet = `for (let i = 0; i < array.length; i++) {\n  \n}`;
+            lines[lines.length - 2] = snippet;
+
+            const newCode = lines.join("\n") + code.slice(pos);
+
+            setCode(newCode);
+
+            // Cursor ke dalam block
+            setTimeout(() => {
+              textarea.selectionStart = textarea.selectionEnd =
+                newCode.indexOf("\n  \n") + 3;
+            }, 0);
+            return;
+          }
+
+          // ✨ Auto-indent baris baru
+          const previousLine = lines.at(-2) || "";
+          const indentMatch = previousLine.match(/^(\s+)/);
+          const currentIndent = indentMatch ? indentMatch[1] : "";
+
+          const updatedCode =
+            code.slice(0, pos) + currentIndent + code.slice(pos);
+          setCode(updatedCode);
+
+          // Pindahkan cursor setelah indentasi
+          setTimeout(() => {
+            textarea.selectionStart = textarea.selectionEnd =
+              pos + currentIndent.length;
+          }, 0);
+
+          // Otomatis format jika javascript
+          if (selectedEditorLanguage === "javascript") {
+            formatCode();
+          }
+        }, 0);
       }
     },
     [code, selectedEditorLanguage]
   );
+
+  const customSnippets = autocompletion({
+    override: [
+      completeFromList([
+        {
+          label: "for",
+          type: "keyword",
+          apply: "for (let i = 0; i < array.length; i++) {\n  \n}",
+          info: "For loop",
+        },
+        {
+          label: "if",
+          type: "keyword",
+          apply: "if (condition) {\n  \n}",
+          info: "If statement",
+        },
+        {
+          label: "log",
+          type: "function",
+          apply: "console.log($1)",
+          info: "Console log",
+        },
+      ]),
+    ],
+  });
+
+  const evalLinter = linter((view) => {
+    const code = view.state.doc.toString();
+    const diagnostics: Diagnostic[] = [];
+
+    const index = code.indexOf("eval(");
+    if (index !== -1) {
+      diagnostics.push({
+        from: index,
+        to: index + 4,
+        severity: "warning",
+        message: "Avoid using eval() for security reasons.",
+      });
+    }
+
+    return diagnostics;
+  });
 
   const formatCode = useCallback(async () => {
     if (!code || selectedEditorLanguage !== "javascript") {
@@ -896,74 +988,6 @@ export function useTestPlatform() {
       console.error("Error formatting code:", error);
     }
   }, [code, selectedEditorLanguage, setCode]);
-
-  // Basic JavaScript formatting fallback
-  const simpleFormatJavaScript = (code: string): string => {
-    try {
-      const stringLiterals: string[] = [];
-      const comments: string[] = [];
-
-      // Simpan string literals
-      code = code.replace(/(["'`])((?:\\.|(?!\1).)*?)\1/g, (match) => {
-        stringLiterals.push(match);
-        return `__STR_${stringLiterals.length - 1}__`;
-      });
-
-      // Simpan single-line comments
-      code = code.replace(/\/\/.*/g, (match) => {
-        comments.push(match);
-        return `__COMMENT_${comments.length - 1}__`;
-      });
-
-      // Tambahkan spasi di sekitar operator dasar (hindari '/')
-      code = code.replace(/([=+\-*%<>!&|^]=?)/g, " $1 ");
-
-      // Titik koma ke newline
-      code = code.replace(/;\s*/g, ";\n");
-
-      // Format block: tambahkan newline setelah `{`, sebelum `}`
-      code = code.replace(/(\))\s*{/g, "$1 {\n").replace(/}\s*/g, "\n}");
-
-      // Hindari pecah destructuring parameter
-      code = code.replace(
-        /function\s+(\w+)\s*\(\s*{\s*([^}]*)\s*}\s*\)/g,
-        (_, fn, params) => {
-          return `function ${fn}({ ${params.trim()} })`;
-        }
-      );
-
-      // Cleanup newline ganda
-      code = code.replace(/\n{2,}/g, "\n");
-
-      // Indentasi per baris
-      const lines = code.split("\n");
-      let indentLevel = 0;
-      const result = lines.map((line) => {
-        const trimmed = line.trim();
-        if (!trimmed) return "";
-
-        if (trimmed.startsWith("}")) indentLevel = Math.max(0, indentLevel - 1);
-        const indented = "  ".repeat(indentLevel) + trimmed;
-        if (trimmed.endsWith("{")) indentLevel += 1;
-
-        return indented;
-      });
-
-      // Kembalikan komentar & string
-      let final = result.join("\n");
-      stringLiterals.forEach((s, i) => {
-        final = final.replace(`__STR_${i}__`, s);
-      });
-      comments.forEach((c, i) => {
-        final = final.replace(`__COMMENT_${i}__`, c);
-      });
-
-      return final.trim();
-    } catch (err) {
-      console.error("Format failed:", err);
-      return code;
-    }
-  };
 
   const runTests = useCallback(async () => {
     if (!currentProblem) return;
@@ -1262,6 +1286,9 @@ export function useTestPlatform() {
     videoRef,
     currentProblem,
     eyeAwayCount,
+    customSnippets,
+    evalLinter,
+    resultsRef,
     setCurrentScreen,
     setSelectedProblemId,
     setTimeLeft,

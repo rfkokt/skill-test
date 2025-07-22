@@ -1,13 +1,19 @@
-"use client"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+"use client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ResponsiveTabSelectorProps {
-  items: { value: string; label: string }[]
-  selectedValue: string
-  onValueChange: (value: string) => void
-  className?: string
-  listClassName?: string // For TabsList specific styling
-  triggerClassName?: string // For TabsTrigger specific styling
+  items: { value: string; label: string }[];
+  selectedValue: string;
+  onValueChange: (value: string) => void;
+  className?: string;
+  listClassName?: string; // For TabsList specific styling
+  triggerClassName?: string; // For TabsTrigger specific styling
 }
 
 export default function ResponsiveTabSelector({
@@ -22,7 +28,7 @@ export default function ResponsiveTabSelector({
   // We will always render the Select component.
   return (
     <div className={className}>
-      <Select value={selectedValue} onValueChange={onValueChange}>
+      <Select value={selectedValue} name="tabs" onValueChange={onValueChange}>
         <SelectTrigger className="w-full border-2 border-neobrutal-border shadow-[2px_2px_0px_0px_#333333] bg-neobrutal-card text-neobrutal-text">
           <SelectValue placeholder="Select an option" />
         </SelectTrigger>
@@ -39,5 +45,5 @@ export default function ResponsiveTabSelector({
         </SelectContent>
       </Select>
     </div>
-  )
+  );
 }

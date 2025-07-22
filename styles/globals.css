@@ -92,3 +92,22 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Override CodeMirror colors (optional) */
+.cm-editor {
+  background-color: transparent;
+  color: #222222;
+}
+
+.cm-content {
+  padding: 1rem;
+}
+
+.cm-gutters {
+  background-color: #f0f0f0; /* soft tone */
+  border-right: 2px solid #333333;
+}
+
+.cm-line {
+  font-family: "Fira Code", monospace;
+}
