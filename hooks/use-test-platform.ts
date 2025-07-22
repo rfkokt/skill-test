@@ -597,7 +597,7 @@ export function useTestPlatform() {
   // Check setiap detik
   useEffect(() => {
     if (currentScreen === "test") {
-      const interval = setInterval(strictVisibilityCheck, 1000);
+      const interval = setInterval(strictVisibilityCheck, 15000);
       return () => clearInterval(interval);
     }
   }, [currentScreen, strictVisibilityCheck]);

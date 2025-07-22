@@ -176,7 +176,6 @@ export default function CodingTestPlatform() {
                     icon: AlertTriangle,
                     variant: "warning",
                   });
-                  resetTestState();
                 }
               };
               startWebcam();

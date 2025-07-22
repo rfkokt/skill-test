@@ -1,34 +1,46 @@
-// problems/react-laptop-list.ts
 import { generateDailyVerificationCodeForScript } from "../utils";
 import { Problem } from "./types";
 
 export const reactLaptopListProblem: Problem = {
   id: "react-laptop-list",
-  title: "Laptop List Basic Map",
+  title: "Render Laptop List",
   difficulty: "Easy",
   examples: [
     {
       input: `laptops = [
-          { id: 1, name: "Asus TUF", type: "Laptop", screen_size: "17 inch" },
-          { id: 2, name: "Axioo", type: "Laptop", screen_size: "13 inch" }
-        ]`,
-      output: `<div class="list">
-          <div class="card">
-            <h3>Asus TUF</h3>
-            <p>Laptop</p>
-            <p>17 inch</p>
-          </div>
-        </div>`,
-      explanation: "Mapping data sesuai dengan field yang tersedia.",
+  { id: 1, name: "Asus TUF", type: "Laptop", screen_size: "17 inch" },
+  { id: 2, name: "Axioo", type: "Laptop", screen_size: "13 inch" }
+]`,
+      output: `<div className="list">
+  <div className="card">
+    <h3>Asus TUF</h3>
+    <p>Laptop</p>
+    <p>17 inch</p>
+  </div>
+  <div className="card">
+    <h3>Axioo</h3>
+    <p>Laptop</p>
+    <p>13 inch</p>
+  </div>
+</div>`,
+      explanation:
+        "Data ditampilkan sesuai struktur HTML dan field yang diminta.",
     },
   ],
   constraints: [
-    "Filter laptops where screen_size === '17 inch'",
-    "Each laptop has id, name, type, and screen_size properties",
-    "Handle empty results with 'No laptops found' message",
+    "Jangan gunakan library eksternal selain React.",
+    "Gunakan metode bawaan JavaScript seperti Array.prototype.map.",
+    "Gunakan JSX dan pastikan penggunaan className sesuai standar React.",
+    "Gunakan key unik saat melakukan mapping komponen dalam list.",
   ],
-  tags: ["React", "JavaScript", "Array Methods", "JSX"],
-  estimatedTime: "30 min",
+  tags: [
+    "React",
+    "JavaScript",
+    "Array Methods",
+    "JSX",
+    "Conditional Rendering",
+  ],
+  estimatedTime: "10 minutes",
   requiresWebcam: true,
   language: "react",
   languages: ["javascript"],
@@ -37,29 +49,49 @@ export const reactLaptopListProblem: Problem = {
   requiresCoding: true,
   requiresVerificationCode: false,
   description: `
-Buat komponen React bernama \`LaptopList\` yang menerima props \`laptops\`.
+Buatlah sebuah komponen React bernama \`LaptopList\` yang menerima properti \`laptops\` berupa array objek.
 
+Setiap objek dalam array memiliki struktur berikut:
+- \`id\` (number): ID unik
+- \`name\` (string): Nama laptop
+- \`type\` (string): Jenis perangkat, misalnya "Laptop"
+- \`screen_size\` (string): Ukuran layar, misalnya "17 inch"
 
-Untuk setiap laptop, tampilkan:
-- Nama (\`name\`) dalam \`<h3>\`
-- Tipe (\`type\`) dalam \`<p>\`
-- Ukuran layar (\`screen_size\`) dalam \`<p>\`
+Tampilkan daftar laptop dalam elemen container \`<div className="list">\`.  
+Setiap item laptop harus dirender dalam elemen \`<div className="card">\`, berisi:
 
-Jika data tidak ada , tampilkan \`<p class="no-laptops">No laptops found</p>\`.
+- Nama laptop dalam elemen \`<h3>\`
+- Tipe dalam elemen \`<p>\`
+- Ukuran layar dalam elemen \`<p>\`
 
-Gunakan JSX.
-    `.trim(),
+Jika data \`laptops\` kosong, null, atau undefined, tampilkan elemen:
+\`\`\`jsx
+<p className="no-laptops">No laptops found</p>
+\`\`\`
+
+Gunakan sintaks JSX, dan pastikan menggunakan \`className\` alih-alih \`class\`, sesuai standar React.
+`.trim(),
+
   solutions: {
     javascript: {
-      initialCodeTemplate: `function LaptopList({ laptops }) {
-
-
+      initialCodeTemplate: `
+function LaptopList({ laptops }) {
   return (
     <div className="list">
-      
+      // Add your code here
     </div>
   );
-}`,
+}
+
+// [
+//   {
+//     id: 1,
+//     name: "Asus TUF",
+//     type: "Laptop",
+//     screen_size: "17 inch",
+//   },
+// ],
+`,
       testCases: [
         {
           input: [
