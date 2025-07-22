@@ -28,7 +28,7 @@ export default function InactivityModal({
               Tes Gagal!
             </h2>
             <p className="text-neobrutal-text/90">
-              Anda tidak aktif di tab ini selama 30 detik.
+              Anda tidak aktif di tab ini selama 15 detik.
             </p>
             {problemTitle && (
               <p className="text-sm text-neobrutal-text/70 mt-2">

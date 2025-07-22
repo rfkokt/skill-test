@@ -70,7 +70,7 @@ export default function StartTestModal({
                       • Anda memiliki {estimatedTime} untuk menyelesaikan soal.
                     </li>
                     <li>
-                      • Jika Anda tidak aktif di tab ini selama 30 detik, tes
+                      • Jika Anda tidak aktif di tab ini selama 15 detik, tes
                       akan otomatis gagal.
                     </li>{" "}
                     {/* Added inactivity rule */}

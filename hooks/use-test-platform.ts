@@ -75,6 +75,9 @@ export function useTestPlatform() {
   const eyeAwayTimerRef = useRef<NodeJS.Timeout | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
 
+  const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
+  const lastHeartbeatRef = useRef<number>(Date.now());
+
   const { showAlert } = useAlertStore();
 
   const currentProblem = selectedProblemId
@@ -422,31 +425,28 @@ export function useTestPlatform() {
 
   // Tab switching detection and refresh prevention
   const handleVisibilityChange = useCallback(() => {
-    if (document.hidden) {
-      setViolationCount((prev) => prev + 1);
-      setShowTabWarning(true);
+    if (document.hidden && currentScreen === "test") {
+      // 1. Hitung pelanggaran
+      setViolationCount((prev) => {
+        const newCount = prev + 1;
+        setShowTabWarning(true);
+        return newCount;
+      });
 
+      // 2. Set timer 15 detik untuk auto-fail
       if (!hiddenTimerRef.current) {
         hiddenStartTimeRef.current = Date.now();
-        hiddenTimerRef.current = setTimeout(() => {
-          failTestDueToInactivity();
-        }, 30000);
-      }
 
-      if (violationCount >= 3) {
-        showAlert({
-          title: "Gagal!",
-          description: `Anda telah melanggar peraturan karna membuka tab lain selama test berlangsung. Tes dianggap gagal.`,
-          icon: AlertTriangle,
-          variant: "error",
-        });
-        if (currentProblem) {
-          markProblemAsCompleted(currentProblem.id);
-        }
-        localStorage.removeItem("inProgressTest");
-        resetTestState();
+        hiddenTimerRef.current = setTimeout(() => {
+          failTest(
+            "Anda membuka tab lain lebih dari 15 detik. Tes dianggap gagal."
+          );
+          hiddenTimerRef.current = null;
+          hiddenStartTimeRef.current = null;
+        }, 15000); // 15 detik
       }
     } else {
+      // Tab kembali terlihat
       if (hiddenTimerRef.current) {
         clearTimeout(hiddenTimerRef.current);
         hiddenTimerRef.current = null;
@@ -454,27 +454,60 @@ export function useTestPlatform() {
       hiddenStartTimeRef.current = null;
     }
   }, [
-    violationCount,
-    failTestDueToInactivity,
+    currentScreen,
+    showAlert,
     currentProblem,
     markProblemAsCompleted,
     resetTestState,
   ]);
 
+  // Fungsi terpisah untuk menggagalkan tes
+  const failTest = useCallback(
+    (message: string) => {
+      showAlert({
+        title: "Gagal!",
+        description: message,
+        icon: AlertTriangle,
+        variant: "error",
+      });
+
+      if (currentProblem) {
+        markProblemAsCompleted(currentProblem.id);
+      }
+
+      localStorage.removeItem("inProgressTest");
+      resetTestState();
+    },
+    [showAlert, currentProblem, markProblemAsCompleted, resetTestState]
+  );
+
+  // Jangan lupa tambahkan useEffect untuk pengecekan violation count
+  useEffect(() => {
+    if (violationCount >= 4) {
+      failTest(
+        "Anda telah melanggar peraturan karena membuka tab lain selama tes berlangsung. Tes dianggap gagal."
+      );
+    }
+  }, [violationCount, failTest]);
+
+  const handleWindowBlur = useCallback(() => {
+    if (currentScreen === "test" && document.hasFocus()) {
+      // Tambahan proteksi untuk Alt+Tab, Windows+Tab, etc.
+      setViolationCount((prev) => prev + 1);
+      setShowTabWarning(true);
+    }
+  }, [currentScreen]);
+
   const handleBeforeUnload = useCallback(
     (e: BeforeUnloadEvent) => {
-      // Only prevent if we are in the test screen and not intentionally leaving
       if (currentScreen === "test" && !isLeavingConfirmedRef.current) {
         e.preventDefault();
-        e.returnValue = "";
-
-        setTimeout(() => {
-          setShowRefreshModal(true);
-        }, 0);
-        return "";
+        e.returnValue =
+          "Anda yakin ingin meninggalkan tes? Progress akan hilang.";
+        return "Anda yakin ingin meninggalkan tes? Progress akan hilang.";
       }
     },
-    [currentScreen, stopWebcam]
+    [currentScreen]
   );
 
   const isLeavingConfirmedRef = useRef(false);
@@ -487,23 +520,87 @@ export function useTestPlatform() {
   }, [handleExitTest, stopWebcam]);
 
   useEffect(() => {
-    document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("beforeunload", handleBeforeUnload);
-
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleWindowBlur);
     // Store the confirmation handler for the modal
     if (typeof window !== "undefined") {
       (window as any).handleLeavingConfirmation = handleLeavingConfirmation;
     }
 
     return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleWindowBlur);
 
       if (hiddenTimerRef.current) {
         clearTimeout(hiddenTimerRef.current);
       }
     };
-  }, [handleVisibilityChange, handleBeforeUnload, handleLeavingConfirmation]);
+  }, [
+    handleVisibilityChange,
+    handleBeforeUnload,
+    handleLeavingConfirmation,
+    handleWindowBlur,
+  ]);
+  useEffect(() => {
+    if (currentScreen === "test") {
+      heartbeatRef.current = setInterval(() => {
+        const isHidden = document.hidden;
+        const hasFocus = document.hasFocus();
+        const isVisible = document.visibilityState === "visible";
+        const now = Date.now();
+        const timeSinceLastBeat = now - lastHeartbeatRef.current;
+
+        // Jika lebih dari 5 detik tanpa heartbeat, anggap frozen
+        if (timeSinceLastBeat > 15000) {
+          failTest("Halaman terdeteksi tidak aktif. Tes dianggap gagal.");
+          return;
+        }
+
+        lastHeartbeatRef.current = now;
+      }, 1000);
+    }
+
+    return () => {
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+      }
+    };
+  }, [currentScreen]);
+
+  const strictVisibilityCheck = useCallback(() => {
+    // Kombinasi multiple checks
+    const isHidden = document.hidden;
+    const hasFocus = document.hasFocus();
+    const isVisible = document.visibilityState === "visible";
+
+    if (currentScreen === "test" && (!isVisible || !hasFocus || isHidden)) {
+      setViolationCount((prev) => prev + 1);
+      setShowTabWarning(true);
+
+      // Timer 15 detik
+      if (!hiddenTimerRef.current) {
+        hiddenTimerRef.current = setTimeout(() => {
+          failTest("Halaman tidak dalam fokus lebih dari 15 detik.");
+        }, 15000);
+      }
+    } else if (isVisible && hasFocus && !isHidden) {
+      // Clear timer jika kembali normal
+      if (hiddenTimerRef.current) {
+        clearTimeout(hiddenTimerRef.current);
+        hiddenTimerRef.current = null;
+      }
+    }
+  }, [currentScreen]);
+
+  // Check setiap detik
+  useEffect(() => {
+    if (currentScreen === "test") {
+      const interval = setInterval(strictVisibilityCheck, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [currentScreen, strictVisibilityCheck]);
 
   const handleSelectProblem = useCallback(
     (problemId: string) => {
@@ -544,7 +641,7 @@ export function useTestPlatform() {
       event.preventDefault();
       setPasteWarningCount((prev) => prev + 1);
       setShowPasteWarningModal(true);
-      if (pasteWarningCount >= 3) {
+      if (pasteWarningCount >= 4) {
         if (currentProblem) {
           failTestDueToInactivity();
           markProblemAsCompleted(currentProblem.id);
@@ -1328,5 +1425,6 @@ export function useTestPlatform() {
     cancelFinishTest,
     formatCode,
     setEyeAwayCount,
+    resetTestState,
   };
 }

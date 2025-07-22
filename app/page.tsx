@@ -38,6 +38,8 @@ import { javascript } from "@codemirror/lang-javascript";
 import { lintGutter } from "@codemirror/lint";
 import { EditorView } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
+import { espresso } from "thememirror";
+
 import {
   AlertTriangle,
   ArrowLeft,
@@ -115,6 +117,7 @@ export default function CodingTestPlatform() {
     handlePaste,
     handleClosePasteWarningModal,
     setEyeAwayCount,
+    resetTestState,
   } = useTestPlatform();
 
   const isMobile = useIsMobile();
@@ -173,6 +176,7 @@ export default function CodingTestPlatform() {
                     icon: AlertTriangle,
                     variant: "warning",
                   });
+                  resetTestState();
                 }
               };
               startWebcam();
@@ -556,6 +560,7 @@ export default function CodingTestPlatform() {
                                 lintGutter(),
                                 evalLinter,
                                 customSnippets,
+                                espresso,
                               ]}
                               onChange={(value) => setCode(value)}
                               onBlur={formatCode}
