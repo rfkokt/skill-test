@@ -34,11 +34,9 @@ arrayDetails = [
   constraints: [
     "Jangan gunakan library eksternal.",
     "Gabungkan array menggunakan metode array JavaScript seperti map dan find.",
-    "Tampilkan hasil akhir menggunakan JSON.stringify dan <pre>.",
-    "Gunakan TypeScript dan tipe data yang sesuai.",
   ],
   tags: ["React", "TypeScript", "Array", "JSX"],
-  estimatedTime: "15 minutes",
+  estimatedTime: "10 minutes",
   requiresWebcam: false,
   language: "react",
   languages: ["javascript"],
@@ -51,7 +49,7 @@ Buatlah komponen React dengan TypeScript bernama \`MergedUserList\` yang menerim
 - \`arrayUsers\`: array objek berisi \`id\` dan \`name\`
 - \`arrayDetails\`: array objek berisi \`id\` dan \`email\`
 
-Gabungkan dua array tersebut berdasarkan \`id\`, dan tampilkan hasil akhirnya dalam tag \`<pre>\` menggunakan \`JSON.stringify\`.
+Gabungkan dua array tersebut berdasarkan \`id\`, dan tampilkan hasil akhirnya.
 
 ### Contoh:
 Jika props-nya adalah:
@@ -68,19 +66,25 @@ arrayDetails = [
 \`\`\`
 
 Maka hasilnya harus:
-\`\`\`jsx
-<pre>[
-  {
-    "id": 1,
-    "name": "Rudi",
-    "email": "rudi@mail.com"
-  },
-  {
-    "id": 2,
-    "name": "Ayu",
-    "email": "ayu@mail.com"
-  }
-]</pre>
+\`\`\`
+<div className="list">
+  <div className="card">
+    <h1>
+      Rudi
+    </h1>
+    <p>
+      rudi@mail.com
+    </p>
+  </div>
+  <div className="card">
+    <h1>
+      Ayu
+    </h1>
+    <p>
+      ayu@mail.com
+    </p>
+  </div>
+</div>
 \`\`\`
 
 Jika salah satu dari array kosong atau tidak cocok, tampilkan:

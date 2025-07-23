@@ -40,6 +40,7 @@ import { EditorView } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
 import { espresso } from "thememirror";
 
+import { MDXRenderer } from "@/components/mdx-renderer";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -356,11 +357,13 @@ export default function CodingTestPlatform() {
                 Description
               </h2>
               <div className="text-neobrutal-text leading-relaxed space-y-4">
+                <MDXRenderer content={currentProblem.description} />
+                {/* 
                 {currentProblem.description
                   .split("\n")
                   .map((paragraph, index) => (
                     <p key={index}>{paragraph}</p>
-                  ))}
+                  ))} */}
               </div>
               {/* Show Expected HTML Output in Description for React problems with multiple test cases */}
               {currentProblem.id.startsWith("react-") &&
