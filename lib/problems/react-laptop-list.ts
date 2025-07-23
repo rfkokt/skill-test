@@ -78,7 +78,7 @@ Gunakan sintaks JSX, dan pastikan menggunakan \`className\` alih-alih \`class\`,
 function LaptopList({ laptops }) {
   return (
     <div className="list">
-      // Add your code here
+      {/* Write your code here */}
     </div>
   );
 }

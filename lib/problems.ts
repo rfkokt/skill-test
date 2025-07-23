@@ -1,19 +1,21 @@
 // problems/index.ts
 
-import { reactInteractiveButtonsProblem } from "./problems/react-interactive-button";
+import { addTwoNumbersProblem } from "./problems/add-two-numbers";
 import { reactLaptopListProblem } from "./problems/react-laptop-list";
+import { reactMergeData } from "./problems/react-merge-data";
+import { reactProductGridProblem } from "./problems/react-product-grid";
 import { Problem } from "./problems/types";
 
 export const problemsData: { [key: string]: Problem } = {
-  // "two-sum": twoSumProblem,
-  // "add-two-numbers": addTwoNumbersProblem,
+  "add-two-numbers": addTwoNumbersProblem,
+  "react-product-grid": reactProductGridProblem,
+  "react-laptop-list": reactLaptopListProblem,
+  "react-merge-data": reactMergeData,
   // "react-user-list": reactUserListProblem,
-  // "react-product-grid": reactProductGridProblem,
+  // "two-sum": twoSumProblem,
   // "longest-substring": longestSubstringProblem,
   // "median-arrays": medianArraysProblem,
   // "reverse-string": reverseStringProblem,
-  "react-laptop-list": reactLaptopListProblem,
-  "react-interactive-buttons": reactInteractiveButtonsProblem,
   // "database-design": databaseDesignProblem,
   // "system-architecture": systemArchitectureProblem,
   // "count-vowels": countVowelsProblem,

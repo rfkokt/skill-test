@@ -26,7 +26,7 @@ export const addTwoNumbersProblem: Problem = {
   languages: ["javascript"],
   verificationCode: "CODE456",
   requiresCoding: true,
-  requiresVerificationCode: true,
+  requiresVerificationCode: false,
   solutions: {
     javascript: {
       initialCodeTemplate:

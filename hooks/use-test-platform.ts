@@ -662,7 +662,6 @@ export function useTestPlatform() {
   const handleClosePasteWarningModal = () => {
     setShowPasteWarningModal(false);
   };
-
   const updateLivePreviewAndConsole = useCallback(() => {
     setConsoleOutput([]);
     if (!currentProblem) {
@@ -701,9 +700,35 @@ export function useTestPlatform() {
       return;
     }
 
+    // Helper function untuk extract component name (sama seperti di testing)
+    const extractComponentName = (code: string): string | null => {
+      // Cari function declaration dengan PascalCase
+      const functionMatch = code.match(/function\s+([A-Z][a-zA-Z0-9]*)/);
+      if (functionMatch) return functionMatch[1];
+
+      // Cari arrow function dengan PascalCase
+      const arrowMatch = code.match(/const\s+([A-Z][a-zA-Z0-9]*)\s*=/);
+      if (arrowMatch) return arrowMatch[1];
+
+      // Cari export default function
+      const exportMatch = code.match(
+        /export\s+default\s+function\s+([A-Z][a-zA-Z0-9]*)/
+      );
+      if (exportMatch) return exportMatch[1];
+
+      // Cari export default arrow function
+      const exportArrowMatch = code.match(
+        /export\s+default\s+([A-Z][a-zA-Z0-9]*)/
+      );
+      if (exportArrowMatch) return exportArrowMatch[1];
+
+      return null;
+    };
+
     try {
       if (selectedEditorLanguage === "javascript") {
         if (currentProblem.id.startsWith("react-")) {
+          // React implementation yang sama seperti di testing
           const React = {
             createElement: (type: string, props: any, ...children: any[]) => {
               const flatChildren = children
@@ -716,6 +741,20 @@ export function useTestPlatform() {
                     if (key === "className") return `className="${value}"`;
                     if (key === "src") return `src="${value}"`;
                     if (key === "alt") return `alt="${value}"`;
+                    if (
+                      key === "style" &&
+                      typeof value === "object" &&
+                      value !== null
+                    ) {
+                      const styleStr = Object.entries(value)
+                        .map(
+                          ([k, v]) =>
+                            `${k.replace(/([A-Z])/g, "-$1").toLowerCase()}:${v}`
+                        )
+                        .join(";");
+                      return `style="${styleStr}"`;
+                    }
+                    if (typeof value === "string") return `${key}="${value}"`;
                     return "";
                   })
                   .filter(Boolean)
@@ -729,11 +768,180 @@ export function useTestPlatform() {
             },
           };
 
-          const userFunction = new Function(
-            "React",
-            "console",
-            "return " + code
-          )(React, customConsole);
+          // Transpile JSX menggunakan Babel (sama seperti di testing)
+          let transpiledCode = "";
+          try {
+            // Pastikan Babel tersedia
+            if (typeof Babel === "undefined") {
+              customConsole.error(
+                "Babel is not available. JSX transpilation failed."
+              );
+              setUserHtmlOutputs([
+                "Error: Babel is not available for JSX transpilation.",
+              ]);
+              setConsoleOutput(capturedLogs);
+              return;
+            }
+
+            transpiledCode =
+              Babel.transform(code, {
+                presets: ["react"], // support JSX
+              }).code || "";
+          } catch (e) {
+            const errorMsg = `Babel compile failed: ${(e as Error).message}`;
+            customConsole.error(errorMsg);
+            setUserHtmlOutputs([
+              `Error compiling code: ${(e as Error).message}`,
+            ]);
+            setConsoleOutput(capturedLogs);
+            return;
+          }
+
+          // Extract component name
+          const componentName = extractComponentName(code);
+          if (!componentName) {
+            const errorMsg =
+              "Cannot detect component name. Make sure to name your function with PascalCase (e.g. UserList).";
+            customConsole.error(errorMsg);
+            customConsole.log("Available code:", code.slice(0, 200) + "...");
+            setUserHtmlOutputs([errorMsg]);
+            setConsoleOutput(capturedLogs);
+            return;
+          }
+
+          // Create user function
+          let userFunction: any;
+          try {
+            // Method 1: Coba dengan approach seperti di testing code
+            try {
+              userFunction = new Function(
+                "React",
+                "console",
+                `${transpiledCode}; return ${componentName};`
+              )(React, customConsole);
+            } catch (directErr) {
+              customConsole.log(
+                `Direct method failed: ${(directErr as Error).message}`
+              );
+            }
+
+            // Method 2: Jika method 1 gagal atau hasilnya undefined
+            if (typeof userFunction !== "function") {
+              customConsole.log(
+                `Trying eval method for component '${componentName}'...`
+              );
+
+              // Buat konteks eksekusi yang isolated
+              const executeCode = new Function(
+                "React",
+                "console",
+                `
+                ${transpiledCode}
+                
+                // Coba berbagai cara untuk mengakses component
+                if (typeof ${componentName} !== 'undefined') {
+                  return ${componentName};
+                }
+                
+                // Jika tidak ada, coba cari di window/global scope
+                if (typeof window !== 'undefined' && window.${componentName}) {
+                  return window.${componentName};
+                }
+                
+                // Coba eval langsung
+                try {
+                  return eval('${componentName}');
+                } catch (e) {
+                  console.error('Eval failed:', e.message);
+                }
+                
+                // Last resort: coba extract function dari code secara manual
+                const codeStr = \`${transpiledCode}\`;
+                const funcRegex = new RegExp('function\\\\s+${componentName}\\\\s*\\\\([^)]*\\\\)\\\\s*\\\\{', 'g');
+                const arrowRegex = new RegExp('(?:const|let|var)\\\\s+${componentName}\\\\s*=\\\\s*\\\\([^)]*\\\\)\\\\s*=>');
+                
+                if (funcRegex.test(codeStr) || arrowRegex.test(codeStr)) {
+                  try {
+                    eval(codeStr);
+                    return eval('${componentName}');
+                  } catch (evalErr) {
+                    console.error('Manual eval failed:', evalErr.message);
+                  }
+                }
+                
+                return undefined;
+                `
+              );
+
+              userFunction = executeCode(React, customConsole);
+            }
+
+            // Method 3: Jika masih gagal, coba parse dan execute secara manual
+            if (typeof userFunction !== "function") {
+              customConsole.log(`Trying manual parsing method...`);
+
+              // Coba buat function wrapper
+              const wrappedCode = `
+                ${transpiledCode}
+                
+                // Return the component if it exists
+                return (function() {
+                  if (typeof ${componentName} === 'function') {
+                    return ${componentName};
+                  }
+                  
+                  // Jika component adalah arrow function yang di-assign ke const
+                  try {
+                    return eval('(${componentName})');
+                  } catch (e) {
+                    console.error('Component access failed:', e.message);
+                    return null;
+                  }
+                })();
+              `;
+
+              try {
+                userFunction = new Function("React", "console", wrappedCode)(
+                  React,
+                  customConsole
+                );
+              } catch (wrapErr) {
+                customConsole.error(
+                  `Wrapped execution failed: ${(wrapErr as Error).message}`
+                );
+              }
+            }
+
+            // Final validation
+            if (typeof userFunction !== "function") {
+              const errorMsg = `All methods failed: '${componentName}' is not accessible as a function. Got: ${typeof userFunction}`;
+              customConsole.error(errorMsg);
+              customConsole.log("Full transpiled code:", transpiledCode);
+
+              // Debug: coba lihat apa yang ada di transpiled code
+              const availableFunctions = transpiledCode.match(
+                /function\s+([A-Za-z][A-Za-z0-9]*)/g
+              );
+              const availableConsts = transpiledCode.match(
+                /(?:const|let|var)\s+([A-Za-z][A-Za-z0-9]*)\s*=/g
+              );
+
+              customConsole.log("Available functions:", availableFunctions);
+              customConsole.log("Available constants:", availableConsts);
+
+              setUserHtmlOutputs([errorMsg]);
+              setConsoleOutput(capturedLogs);
+              return;
+            }
+          } catch (err) {
+            const errorMsg = `Execution failed: ${(err as Error).message}`;
+            customConsole.error(errorMsg);
+            setUserHtmlOutputs([
+              `Error running code: ${(err as Error).message}`,
+            ]);
+            setConsoleOutput(capturedLogs);
+            return;
+          }
 
           // Generate preview outputs for all test cases
           const previewOutputs: (string | null)[] = [];
@@ -745,7 +953,8 @@ export function useTestPlatform() {
                   const props = {
                     [propName]: problemSolution.testCases[i].input[0],
                   };
-                  previewOutputs.push(userFunction(props));
+                  const result = userFunction(props);
+                  previewOutputs.push(result);
                 } else {
                   const errorMsg = `Error: 'reactPropName' is not defined for this React problem.`;
                   previewOutputs.push(errorMsg);
@@ -762,15 +971,19 @@ export function useTestPlatform() {
           }
           setUserHtmlOutputs(previewOutputs);
         } else {
-          const userFunction = new Function("console", "return " + code)(
-            customConsole
-          );
-          setUserHtmlOutputs([]);
+          // Handle non-React JavaScript
           try {
-            userFunction(
-              problemSolution.testCases[0]?.input[0],
-              problemSolution.testCases[0]?.input[1]
+            const userFunction = new Function("console", "return " + code)(
+              customConsole
             );
+            setUserHtmlOutputs([]);
+
+            if (problemSolution.testCases[0]) {
+              userFunction(
+                problemSolution.testCases[0]?.input[0],
+                problemSolution.testCases[0]?.input[1]
+              );
+            }
           } catch (err) {
             customConsole.error(
               `Error executing code for preview: ${(err as Error).message}`
