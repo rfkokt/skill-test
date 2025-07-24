@@ -13,8 +13,8 @@ export const reactMergeData: Problem = {
 ];
 
 arrayDetails = [
-  { id: 1, email: "rudi@mail.com" },
-  { id: 2, email: "ayu@mail.com" }
+  { id_user: 1, email: "rudi@mail.com" },
+  { id_user: 2, email: "ayu@mail.com" }
 ];`,
       output: `<pre>[
   {
@@ -47,7 +47,7 @@ arrayDetails = [
   description: `
 Buatlah komponen React dengan TypeScript bernama \`MergedUserList\` yang menerima props:
 - \`arrayUsers\`: array objek berisi \`id\` dan \`name\`
-- \`arrayDetails\`: array objek berisi \`id\` dan \`email\`
+- \`arrayDetails\`: array objek berisi \`id_user\` dan \`email\`
 
 Gabungkan dua array tersebut berdasarkan \`id\`, dan tampilkan hasil akhirnya.
 
