@@ -3,8 +3,6 @@
 import ResponsiveTabSelector from "@/components/responsive-tab-selector";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { problemsData } from "@/lib/problems";
 import { Camera, Clock, Lock, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -133,7 +131,7 @@ export default function ProblemSelection({
           triggerClassName="data-[state=active]:bg-neobrutal-softBlue data-[state=active]:text-neobrutal-softBlueText data-[state=active]:shadow-[inset_0px_0px_0px_2px_#333333]"
         />
 
-        <div className="flex items-center space-x-2 mb-8 justify-end">
+        {/* <div className="flex items-center space-x-2 mb-8 justify-end">
           <Switch
             id="show-completed"
             checked={showCompleted}
@@ -143,7 +141,7 @@ export default function ProblemSelection({
           <Label htmlFor="show-completed" className="text-neobrutal-text">
             Show Completed Problems
           </Label>
-        </div>
+        </div> */}
 
         <div className="grid gap-6">
           {filteredProblems.map((problem) => {
