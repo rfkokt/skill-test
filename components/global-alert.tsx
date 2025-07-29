@@ -8,7 +8,10 @@ export default function GlobalAlert() {
   const { isOpen, data, closeAlert } = useAlertStore();
 
   if (!isOpen || !data) return null;
-
+  const handlePrimaryAction = () => {
+    data.onClick?.();
+    closeAlert();
+  };
   const variantStyles = {
     default: "bg-blue-500",
     warning: "bg-yellow-500",
@@ -30,7 +33,7 @@ export default function GlobalAlert() {
             <h2 className="text-lg font-semibold text-white">{data.title}</h2>
           </div>
           <button
-            onClick={closeAlert}
+            onClick={handlePrimaryAction}
             className="text-white/80 hover:text-white transition-colors"
           >
             <X className="w-5 h-5" />
@@ -38,15 +41,16 @@ export default function GlobalAlert() {
         </div>
 
         <div className="p-6">
-          <p className="text-neobrutal-text">{data.description}</p>
+          <p className="text-neobrutal-text whitespace-pre-line">
+            {data.description}
+          </p>
         </div>
-
-        <div className="flex justify-end p-6 border-t-2 border-neobrutal-border bg-background">
+        <div className="flex justify-end p-6 space-x-4 border-t-2 border-neobrutal-border bg-background">
           <Button
-            onClick={closeAlert}
+            onClick={handlePrimaryAction}
             className={`${variantStyles[variant]} hover:opacity-90 text-white`}
           >
-            Tutup
+            Oke
           </Button>
         </div>
       </div>

@@ -37,13 +37,13 @@ arrayDetails = [
   ],
   tags: ["React", "TypeScript", "Array", "JSX"],
   estimatedTime: "10 minutes",
-  requiresWebcam: false,
+  requiresWebcam: true,
   language: "react",
   languages: ["javascript"],
   reactPropName: "data",
   verificationCode: generateDailyVerificationCodeForScript(),
   requiresCoding: true,
-  requiresVerificationCode: false,
+  requiresVerificationCode: true,
   description: `
 Buatlah komponen React dengan TypeScript bernama \`MergedUserList\` yang menerima props:
 - \`arrayUsers\`: array objek berisi \`id\` dan \`name\`
@@ -60,8 +60,8 @@ arrayUsers = [
 ]
 
 arrayDetails = [
-  { id: 1, email: "rudi@mail.com" },
-  { id: 2, email: "ayu@mail.com" }
+  { id_user: 1, email: "rudi@mail.com" },
+  { id_user: 2, email: "ayu@mail.com" }
 ]
 \`\`\`
 
@@ -113,8 +113,8 @@ Jika salah satu dari array kosong atau tidak cocok, tampilkan:
                 { id: 2, name: "Ayu" },
               ],
               arrayDetails: [
-                { id: 1, email: "rudi@mail.com" },
-                { id: 2, email: "ayu@mail.com" },
+                { id_user: 1, email: "rudi@mail.com" },
+                { id_user: 2, email: "ayu@mail.com" },
               ],
             },
           ],

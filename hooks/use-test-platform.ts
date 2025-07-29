@@ -98,9 +98,21 @@ export function useTestPlatform() {
       console.error("Error accessing webcam:", err);
       showAlert({
         title: "Peringatan",
-        description: "Pastikan Anda memberikan izin untuk mengakses webcam.",
+        description: `Kamera Diblokir
+
+        Anda sepertinya telah memblokir akses kamera untuk situs ini. Untuk melanjutkan, silakan izinkan akses secara manual.
+
+        Cara Mengubah Pengaturan:
+
+        1. Klik ikon gembok 🔒 di sebelah kiri alamat situs pada browser Anda.
+        2. Cari pengaturan Kamera (Camera).
+        3. Ubah dari Blokir (Block) menjadi Izinkan (Allow).
+        4. Masuk lagi ke soal ini.`,
         icon: AlertTriangle,
         variant: "warning",
+        onClick: () => {
+          confirmExitAndFail();
+        },
       });
     }
   }, []);
@@ -246,8 +258,8 @@ export function useTestPlatform() {
   const markProblemAsCompleted = useCallback((problemId: string) => {
     setCompletedProblems((prev) => {
       const newCompleted = [...new Set([...prev, problemId])];
-      localStorage.setItem("completedProblems", JSON.stringify(newCompleted));
-      return newCompleted;
+      localStorage.setItem("completedProblems", JSON.stringify([]));
+      return [];
     });
   }, []);
 
@@ -520,7 +532,7 @@ export function useTestPlatform() {
   }, [handleExitTest, stopWebcam]);
 
   useEffect(() => {
-    window.addEventListener("beforeunload", handleBeforeUnload);
+    // window.addEventListener("beforeunload", handleBeforeUnload);
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("blur", handleWindowBlur);
     // Store the confirmation handler for the modal
@@ -529,7 +541,7 @@ export function useTestPlatform() {
     }
 
     return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
+      // window.removeEventListener("beforeunload", handleBeforeUnload);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleWindowBlur);
 
@@ -543,31 +555,6 @@ export function useTestPlatform() {
     handleLeavingConfirmation,
     handleWindowBlur,
   ]);
-  useEffect(() => {
-    if (currentScreen === "test") {
-      heartbeatRef.current = setInterval(() => {
-        const isHidden = document.hidden;
-        const hasFocus = document.hasFocus();
-        const isVisible = document.visibilityState === "visible";
-        const now = Date.now();
-        const timeSinceLastBeat = now - lastHeartbeatRef.current;
-
-        // Jika lebih dari 5 detik tanpa heartbeat, anggap frozen
-        if (timeSinceLastBeat > 15000) {
-          failTest("Halaman terdeteksi tidak aktif. Tes dianggap gagal.");
-          return;
-        }
-
-        lastHeartbeatRef.current = now;
-      }, 1000);
-    }
-
-    return () => {
-      if (heartbeatRef.current) {
-        clearInterval(heartbeatRef.current);
-      }
-    };
-  }, [currentScreen]);
 
   const strictVisibilityCheck = useCallback(() => {
     // Kombinasi multiple checks
@@ -918,7 +905,6 @@ export function useTestPlatform() {
               customConsole.error(errorMsg);
               customConsole.log("Full transpiled code:", transpiledCode);
 
-              // Debug: coba lihat apa yang ada di transpiled code
               const availableFunctions = transpiledCode.match(
                 /function\s+([A-Za-z][A-Za-z0-9]*)/g
               );

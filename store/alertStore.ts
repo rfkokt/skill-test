@@ -2,11 +2,15 @@
 import { LucideIcon } from "lucide-react";
 import { create } from "zustand";
 
-interface AlertData {
+export type AlertVariant = "default" | "warning" | "error" | "success";
+
+export interface AlertData {
   title: string;
   description: string;
   icon?: LucideIcon;
-  variant?: "default" | "warning" | "error" | "success";
+  variant?: AlertVariant;
+  onClick?: () => void; // onClick ini untuk tombol aksi utama
+  onClose?: () => void; // Opsional: jika ada aksi saat menutup
 }
 
 interface AlertState {
@@ -16,10 +20,18 @@ interface AlertState {
   closeAlert: () => void;
 }
 
-export const useAlertStore = create<AlertState>((set) => ({
+export const useAlertStore = create<AlertState>((set, get) => ({
   isOpen: false,
   data: null,
 
-  showAlert: (data) => set({ isOpen: true, data }),
-  closeAlert: () => set({ isOpen: false, data: null }),
+  showAlert: (data) => {
+    set({ isOpen: true, data });
+  },
+
+  // Perbaikan di sini: closeAlert HANYA menutup alert.
+  closeAlert: () => {
+    // Jalankan callback onClose jika ada, sebelum menutup
+    get().data?.onClose?.();
+    set({ isOpen: false, data: null });
+  },
 }));

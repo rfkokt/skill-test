@@ -42,7 +42,6 @@ import { espresso } from "thememirror";
 
 import { MDXRenderer } from "@/components/mdx-renderer";
 import {
-  AlertTriangle,
   ArrowLeft,
   Camera,
   Code,
@@ -170,13 +169,6 @@ export default function CodingTestPlatform() {
                   setWebcamStream(stream);
                 } catch (err) {
                   console.error("Error accessing webcam:", err);
-                  showAlert({
-                    title: "Peringatan",
-                    description:
-                      "Pastikan Anda memberikan izin untuk mengakses webcam.",
-                    icon: AlertTriangle,
-                    variant: "warning",
-                  });
                 }
               };
               startWebcam();
@@ -358,12 +350,6 @@ export default function CodingTestPlatform() {
               </h2>
               <div className="text-neobrutal-text leading-relaxed space-y-4">
                 <MDXRenderer content={currentProblem.description} />
-                {/* 
-                {currentProblem.description
-                  .split("\n")
-                  .map((paragraph, index) => (
-                    <p key={index}>{paragraph}</p>
-                  ))} */}
               </div>
               {/* Show Expected HTML Output in Description for React problems with multiple test cases */}
               {currentProblem.id.startsWith("react-") &&
