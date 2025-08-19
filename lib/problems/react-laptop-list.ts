@@ -40,7 +40,7 @@ export const reactLaptopListProblem: Problem = {
     "JSX",
     "Conditional Rendering",
   ],
-  estimatedTime: "10 minutes",
+  estimatedTime: "15 minutes",
   requiresWebcam: true,
   language: "react",
   languages: ["javascript"],

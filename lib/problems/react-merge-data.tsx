@@ -36,7 +36,7 @@ arrayDetails = [
     "Gabungkan array menggunakan metode array JavaScript seperti map dan find.",
   ],
   tags: ["React", "TypeScript", "Array", "JSX"],
-  estimatedTime: "10 minutes",
+  estimatedTime: "15 minutes",
   requiresWebcam: true,
   language: "react",
   languages: ["javascript"],
