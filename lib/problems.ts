@@ -1,14 +1,16 @@
 // problems/index.ts
 
-import { addTwoNumbersProblem } from "./problems/add-two-numbers";
-import { reactLaptopListProblem } from "./problems/react-laptop-list";
-import { reactMergeData } from "./problems/react-merge-data";
+import { reactFilterEvenNumbers } from "./problems/react-filter-even-number";
+import { reactStudentSubjects } from "./problems/react-student-subjects";
 import { Problem } from "./problems/types";
 
 export const problemsData: { [key: string]: Problem } = {
-  "add-two-numbers": addTwoNumbersProblem,
-  "react-laptop-list": reactLaptopListProblem,
-  "react-merge-data": reactMergeData,
+  // "add-two-numbers": addTwoNumbersProblem,
+  // "react-laptop-list": reactLaptopListProblem,
+  // "react-merge-data": reactMergeData,
+  "react-filter-even-numbers": reactFilterEvenNumbers,
+  // "react-unique-tags-count": reactUniqueTagsCount,
+  "react-student-subjects": reactStudentSubjects,
   // "react-product-grid": reactProductGridProblem,
   // "react-user-list": reactUserListProblem,
   // "two-sum": twoSumProblem,
