@@ -17,7 +17,7 @@ export const reactFilterEvenNumbers: Problem = {
     "Gunakan metode array JavaScript seperti filter.",
   ],
   tags: ["React", "JavaScript", "Array", "Filter"],
-  estimatedTime: "10 minutes",
+  estimatedTime: "20 minutes",
   requiresWebcam: true,
   language: "react",
   languages: ["javascript"],
