@@ -2,6 +2,7 @@
 
 import { reactFilterEvenNumbers } from "./problems/react-filter-even-number";
 import { reactStudentSubjects } from "./problems/react-student-subjects";
+import { interviewSession } from "./problems/interview-session";
 import { Problem } from "./problems/types";
 
 export const problemsData: { [key: string]: Problem } = {
@@ -11,6 +12,7 @@ export const problemsData: { [key: string]: Problem } = {
   "react-filter-even-numbers": reactFilterEvenNumbers,
   // "react-unique-tags-count": reactUniqueTagsCount,
   "react-student-subjects": reactStudentSubjects,
+  "interview-session": interviewSession,
   // "react-product-grid": reactProductGridProblem,
   // "react-user-list": reactUserListProblem,
   // "two-sum": twoSumProblem,
